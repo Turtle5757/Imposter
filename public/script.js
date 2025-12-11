@@ -10,7 +10,6 @@ const menuDiv = document.getElementById('menu');
 const lobbyDiv = document.getElementById('lobby');
 const playerListUl = document.getElementById('playerList');
 const startGameBtn = document.getElementById('startGameBtn');
-const startVotingBtn = document.getElementById('startVotingBtn');
 const gameDiv = document.getElementById('game');
 const gameIdDisplay = document.getElementById('gameIdDisplay');
 const wordDisplay = document.getElementById('wordDisplay');
@@ -67,15 +66,30 @@ socket.on('secretWord', word => wordDisplay.textContent=word);
 socket.on('gameStarted', ()=>{
     lobbyDiv.style.display='none';
     gameDiv.style.display='block';
+    chatInput.disabled = true;
 });
 
-// Chat
+// Turn-based clues
+socket.on('nextTurn', playerName => {
+    if(playerName === playerNameInput.value.trim()){
+        chatInput.disabled = false;
+        chatInput.placeholder = 'Your turn! Enter a clue';
+    } else {
+        chatInput.disabled = true;
+        chatInput.placeholder = `Waiting for ${playerName}'s turn...`;
+    }
+});
+
+// Submit clue
 sendChatBtn.onclick = ()=>{
-    const msg = chatInput.value.trim();
-    if(!msg) return;
-    socket.emit('sendChat', currentGameId, msg);
+    const clue = chatInput.value.trim();
+    if(!clue) return;
+    socket.emit('submitClue', currentGameId, clue);
     chatInput.value='';
+    chatInput.disabled = true;
 };
+
+// Chat updates
 socket.on('chatUpdate', chatMsg=>{
     const p = document.createElement('p');
     p.textContent=`${chatMsg.player}: ${chatMsg.message}`;
@@ -83,8 +97,7 @@ socket.on('chatUpdate', chatMsg=>{
     chatBox.scrollTop = chatBox.scrollHeight;
 });
 
-// Start voting
-startVotingBtn.onclick = ()=>socket.emit('startVoting', currentGameId);
+// Voting
 socket.on('startVoting', playerNames => {
     votingDiv.style.display='block';
     voteButtonsDiv.innerHTML='';
