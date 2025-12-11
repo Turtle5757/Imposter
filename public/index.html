@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Imposter Online</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<h1>Imposter Online</h1>
+
+<div id="menu">
+    <input type="text" id="playerName" placeholder="Your Name">
+    <button id="createBtn">Create Game</button>
+    <input type="text" id="joinGameId" placeholder="Game ID">
+    <button id="joinBtn">Join Game</button>
+</div>
+
+<div id="lobby" style="display:none;">
+    <h2>Lobby - Game ID: <span id="gameIdDisplay"></span></h2>
+    <ul id="playerList"></ul>
+    <button id="startGameBtn">Start Game</button>
+</div>
+
+<div id="game" style="display:none;">
+    <h2 id="wordDisplay"></h2>
+    <div id="clueInputDiv">
+        <input type="text" id="clueInput" placeholder="Enter your clue">
+        <button id="submitClueBtn">Submit Clue</button>
+    </div>
+    <div id="votingDiv" style="display:none;">
+        <p>Vote for the Imposter:</p>
+        <div id="voteButtons"></div>
+    </div>
+    <div id="resultDiv" style="display:none;"></div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
