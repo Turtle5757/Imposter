@@ -10,7 +10,7 @@ app.use(express.static('public'));
 
 let games = {}; // gameId -> game state
 
-// Helper to pick a word from a category
+// Category words
 const categoryWords = {
     Food: ['Pizza','Burger','Sushi','Cake','Pasta'],
     Animals: ['Dog','Cat','Elephant','Lion','Tiger'],
@@ -20,6 +20,7 @@ const categoryWords = {
 io.on('connection', socket => {
     console.log('User connected', socket.id);
 
+    // Create game
     socket.on('createGame', (playerName, category, callback) => {
         const gameId = Math.random().toString(36).substr(2,6).toUpperCase();
         const secretWord = categoryWords[category][Math.floor(Math.random()*categoryWords[category].length)];
@@ -38,6 +39,7 @@ io.on('connection', socket => {
         io.to(gameId).emit('updatePlayers', games[gameId].players);
     });
 
+    // Join game
     socket.on('joinGame', (gameId, playerName, callback) => {
         const game = games[gameId];
         if(game && game.players.length < 10){
@@ -50,6 +52,7 @@ io.on('connection', socket => {
         }
     });
 
+    // Start game
     socket.on('startGame', (gameId) => {
         const game = games[gameId];
         if(!game || socket.id !== game.host) return;
@@ -66,6 +69,7 @@ io.on('connection', socket => {
         io.to(gameId).emit('gameStarted');
     });
 
+    // Chat messages
     socket.on('sendChat', (gameId, message) => {
         const game = games[gameId];
         const player = game.players.find(p => p.id === socket.id);
@@ -74,8 +78,18 @@ io.on('connection', socket => {
         io.to(gameId).emit('chatUpdate', chatMsg);
     });
 
+    // Start voting
+    socket.on('startVoting', (gameId) => {
+        const game = games[gameId];
+        if(!game) return;
+        game.stage = 'voting';
+        io.to(gameId).emit('startVoting', game.players.map(p => p.name));
+    });
+
+    // Voting
     socket.on('vote', (gameId, votedName) => {
         const game = games[gameId];
+        if(game.stage !== 'voting') return;
         game.votes[socket.id] = votedName;
 
         if(Object.keys(game.votes).length === game.players.length){
@@ -94,6 +108,7 @@ io.on('connection', socket => {
         }
     });
 
+    // Disconnect
     socket.on('disconnect', () => {
         for(const gameId in games){
             let game = games[gameId];
