@@ -1,15 +1,20 @@
 const socket = io();
 
 const createBtn = document.getElementById('createBtn');
-const joinBtn = document.getElementById('joinBtn');
+const showRoomsBtn = document.getElementById('showRoomsBtn');
+const refreshRoomsBtn = document.getElementById('refreshRoomsBtn');
 const playerNameInput = document.getElementById('playerName');
 const categorySelect = document.getElementById('categorySelect');
-const joinGameIdInput = document.getElementById('joinGameId');
 
 const menuDiv = document.getElementById('menu');
+const roomListDiv = document.getElementById('roomListDiv');
+const roomListUl = document.getElementById('roomList');
+
 const lobbyDiv = document.getElementById('lobby');
 const playerListUl = document.getElementById('playerList');
 const startGameBtn = document.getElementById('startGameBtn');
+const startVotingBtn = document.getElementById('startVotingBtn');
+
 const gameDiv = document.getElementById('game');
 const gameIdDisplay = document.getElementById('gameIdDisplay');
 const wordDisplay = document.getElementById('wordDisplay');
@@ -35,20 +40,37 @@ createBtn.onclick = () => {
     });
 };
 
-// Join game
-joinBtn.onclick = () => {
+// Show available rooms
+showRoomsBtn.onclick = () => {
+    roomListDiv.style.display='block';
+    socket.emit('getActiveGames', rooms => {
+        roomListUl.innerHTML = '';
+        rooms.forEach(r => {
+            const li = document.createElement('li');
+            li.textContent = `Room ${r.id} (${r.playerCount}/10)`;
+            li.onclick = () => joinRoom(r.id);
+            roomListUl.appendChild(li);
+        });
+    });
+};
+
+// Refresh rooms
+refreshRoomsBtn.onclick = showRoomsBtn.onclick;
+
+// Join room
+function joinRoom(gameId){
     const name = playerNameInput.value.trim();
-    const gameId = joinGameIdInput.value.trim();
-    if(!name || !gameId) return alert('Enter name and Game ID');
-    socket.emit('joinGame', gameId, name, (res)=>{
+    if(!name) return alert('Enter your name');
+    socket.emit('joinGame', gameId, name, res => {
         if(res.success){
             currentGameId = gameId;
             menuDiv.style.display='none';
             lobbyDiv.style.display='block';
-            gameIdDisplay.textContent=gameId;
-        } else { alert(res.message); }
+            gameIdDisplay.textContent=currentGameId;
+            roomListDiv.style.display='none';
+        } else alert(res.message);
     });
-};
+}
 
 // Update players
 socket.on('updatePlayers', players=>{
@@ -63,48 +85,38 @@ socket.on('updatePlayers', players=>{
 // Start game
 startGameBtn.onclick = ()=>socket.emit('startGame', currentGameId);
 socket.on('secretWord', word => wordDisplay.textContent=word);
-socket.on('gameStarted', ()=>{
+socket.on('gameStarted', ()=> {
     lobbyDiv.style.display='none';
     gameDiv.style.display='block';
-    chatInput.disabled = true;
-});
-
-// Turn-based clues
-socket.on('nextTurn', playerName => {
-    if(playerName === playerNameInput.value.trim()){
-        chatInput.disabled = false;
-        chatInput.placeholder = 'Your turn! Enter a clue';
-    } else {
-        chatInput.disabled = true;
-        chatInput.placeholder = `Waiting for ${playerName}'s turn...`;
-    }
 });
 
 // Submit clue
-sendChatBtn.onclick = ()=>{
+sendChatBtn.onclick = () => {
     const clue = chatInput.value.trim();
     if(!clue) return;
     socket.emit('submitClue', currentGameId, clue);
     chatInput.value='';
-    chatInput.disabled = true;
 };
 
 // Chat updates
 socket.on('chatUpdate', chatMsg=>{
     const p = document.createElement('p');
-    p.textContent=`${chatMsg.player}: ${chatMsg.message}`;
+    p.textContent = `${chatMsg.player}: ${chatMsg.message}`;
     chatBox.appendChild(p);
     chatBox.scrollTop = chatBox.scrollHeight;
 });
 
+// Start voting
+startVotingBtn.onclick = () => socket.emit('startVoting', currentGameId);
+
 // Voting
-socket.on('startVoting', playerNames => {
+socket.on('startVoting', playerNames=>{
     votingDiv.style.display='block';
     voteButtonsDiv.innerHTML='';
     playerNames.forEach(name=>{
         const btn = document.createElement('button');
         btn.textContent=name;
-        btn.onclick = ()=>{
+        btn.onclick = () => {
             socket.emit('vote', currentGameId, name);
             votingDiv.style.display='none';
             wordDisplay.textContent='Waiting for results...';
@@ -123,5 +135,5 @@ socket.on('gameResult', data=>{
     html += `<p>Secret Word: ${data.word}</p>`;
     html += `<p>Clues:</p>`;
     data.chat.forEach(c=>html+=`<p>${c.player}: ${c.message}</p>`);
-    resultDiv.innerHTML=html;
+    resultDiv.innerHTML = html;
 });
