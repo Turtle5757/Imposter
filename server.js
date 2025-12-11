@@ -8,20 +8,30 @@ const io = new Server(server);
 
 app.use(express.static('public'));
 
-let games = {}; // key: gameId, value: game state
+let games = {}; // gameId -> game state
+
+// Helper to pick a word from a category
+const categoryWords = {
+    Food: ['Pizza','Burger','Sushi','Cake','Pasta'],
+    Animals: ['Dog','Cat','Elephant','Lion','Tiger'],
+    Objects: ['Chair','Table','Phone','Book','Car']
+};
 
 io.on('connection', socket => {
-    console.log('A user connected:', socket.id);
+    console.log('User connected', socket.id);
 
-    socket.on('createGame', (playerName, callback) => {
-        const gameId = Math.random().toString(36).substr(2, 6).toUpperCase();
+    socket.on('createGame', (playerName, category, callback) => {
+        const gameId = Math.random().toString(36).substr(2,6).toUpperCase();
+        const secretWord = categoryWords[category][Math.floor(Math.random()*categoryWords[category].length)];
         games[gameId] = {
             host: socket.id,
-            players: [{id: socket.id, name: playerName, isImposter: false, clue: ''}],
-            secretWord: null,
+            category,
+            secretWord,
+            players: [{id: socket.id, name: playerName, isImposter:false}],
             imposterIndex: null,
-            clues: [],
-            stage: 'waiting'
+            stage: 'waiting',
+            votes: {},
+            chat: []
         };
         socket.join(gameId);
         callback(gameId);
@@ -30,72 +40,62 @@ io.on('connection', socket => {
 
     socket.on('joinGame', (gameId, playerName, callback) => {
         const game = games[gameId];
-        if(game && game.players.length < 10) {
-            game.players.push({id: socket.id, name: playerName, isImposter: false, clue: ''});
+        if(game && game.players.length < 10){
+            game.players.push({id: socket.id, name: playerName, isImposter:false});
             socket.join(gameId);
             io.to(gameId).emit('updatePlayers', game.players);
             callback({success:true});
         } else {
-            callback({success:false, message: 'Game full or not found'});
+            callback({success:false, message:'Game full or not found'});
         }
     });
 
     socket.on('startGame', (gameId) => {
         const game = games[gameId];
-        if(game && socket.id === game.host) {
-            const words = ['apple', 'banana', 'car', 'dog', 'pizza', 'mountain', 'guitar', 'ocean'];
-            game.secretWord = words[Math.floor(Math.random()*words.length)];
-            game.imposterIndex = Math.floor(Math.random()*game.players.length);
-            game.players[game.imposterIndex].isImposter = true;
-            game.stage = 'clues';
-            
-            game.players.forEach(p => {
-                if(p.isImposter){
-                    io.to(p.id).emit('secretWord', 'You are the Imposter!');
-                } else {
-                    io.to(p.id).emit('secretWord', game.secretWord);
-                }
-            });
-            io.to(gameId).emit('gameStarted');
-        }
+        if(!game || socket.id !== game.host) return;
+        game.imposterIndex = Math.floor(Math.random()*game.players.length);
+        game.players[game.imposterIndex].isImposter = true;
+        game.stage = 'chat';
+        game.players.forEach(p => {
+            if(p.isImposter){
+                io.to(p.id).emit('secretWord', `You are the Imposter! Category: ${game.category}`);
+            } else {
+                io.to(p.id).emit('secretWord', game.secretWord);
+            }
+        });
+        io.to(gameId).emit('gameStarted');
     });
 
-    socket.on('submitClue', (gameId, clue) => {
+    socket.on('sendChat', (gameId, message) => {
         const game = games[gameId];
         const player = game.players.find(p => p.id === socket.id);
-        player.clue = clue;
-        game.clues.push({player: player.name, clue});
-        
-        if(game.clues.length === game.players.length){
-            game.stage = 'voting';
-            io.to(gameId).emit('startVoting', game.players.map(p => p.name));
-        }
+        const chatMsg = {player: player.name, message};
+        game.chat.push(chatMsg);
+        io.to(gameId).emit('chatUpdate', chatMsg);
     });
 
     socket.on('vote', (gameId, votedName) => {
         const game = games[gameId];
-        if(!game.votes) game.votes = {};
         game.votes[socket.id] = votedName;
 
         if(Object.keys(game.votes).length === game.players.length){
             const voteCounts = {};
             Object.values(game.votes).forEach(v => voteCounts[v] = (voteCounts[v]||0)+1);
             const maxVotes = Math.max(...Object.values(voteCounts));
-            const votedPlayerName = Object.keys(voteCounts).find(k => voteCounts[k]===maxVotes);
+            const votedPlayer = Object.keys(voteCounts).find(k => voteCounts[k] === maxVotes);
             const imposter = game.players.find(p => p.isImposter);
 
             io.to(gameId).emit('gameResult', {
                 imposter: imposter.name,
-                votedPlayer: votedPlayerName,
+                votedPlayer,
                 word: game.secretWord,
-                clues: game.clues
+                chat: game.chat
             });
         }
     });
 
     socket.on('disconnect', () => {
-        console.log('User disconnected:', socket.id);
-        for(let gameId in games){
+        for(const gameId in games){
             let game = games[gameId];
             game.players = game.players.filter(p => p.id !== socket.id);
             io.to(gameId).emit('updatePlayers', game.players);
@@ -104,4 +104,5 @@ io.on('connection', socket => {
     });
 });
 
-server.listen(3000, () => console.log('Server running on port 3000'));
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
