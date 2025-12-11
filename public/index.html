@@ -11,6 +11,11 @@
 
 <div id="menu">
     <input type="text" id="playerName" placeholder="Your Name">
+    <select id="categorySelect">
+        <option value="Food">Food</option>
+        <option value="Animals">Animals</option>
+        <option value="Objects">Objects</option>
+    </select>
     <button id="createBtn">Create Game</button>
     <input type="text" id="joinGameId" placeholder="Game ID">
     <button id="joinBtn">Join Game</button>
@@ -24,9 +29,10 @@
 
 <div id="game" style="display:none;">
     <h2 id="wordDisplay"></h2>
-    <div id="clueInputDiv">
-        <input type="text" id="clueInput" placeholder="Enter your clue">
-        <button id="submitClueBtn">Submit Clue</button>
+    <div id="chatDiv">
+        <div id="chatBox"></div>
+        <input type="text" id="chatInput" placeholder="Type your clue...">
+        <button id="sendChatBtn">Send</button>
     </div>
     <div id="votingDiv" style="display:none;">
         <p>Vote for the Imposter:</p>
