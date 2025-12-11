@@ -10,6 +10,7 @@ const menuDiv = document.getElementById('menu');
 const lobbyDiv = document.getElementById('lobby');
 const playerListUl = document.getElementById('playerList');
 const startGameBtn = document.getElementById('startGameBtn');
+const startVotingBtn = document.getElementById('startVotingBtn');
 const gameDiv = document.getElementById('game');
 const gameIdDisplay = document.getElementById('gameIdDisplay');
 const wordDisplay = document.getElementById('wordDisplay');
@@ -82,7 +83,24 @@ socket.on('chatUpdate', chatMsg=>{
     chatBox.scrollTop = chatBox.scrollHeight;
 });
 
-// Voting phase
+// Start voting
+startVotingBtn.onclick = ()=>socket.emit('startVoting', currentGameId);
+socket.on('startVoting', playerNames => {
+    votingDiv.style.display='block';
+    voteButtonsDiv.innerHTML='';
+    playerNames.forEach(name=>{
+        const btn = document.createElement('button');
+        btn.textContent=name;
+        btn.onclick = ()=>{
+            socket.emit('vote', currentGameId, name);
+            votingDiv.style.display='none';
+            wordDisplay.textContent='Waiting for results...';
+        };
+        voteButtonsDiv.appendChild(btn);
+    });
+});
+
+// Game result
 socket.on('gameResult', data=>{
     votingDiv.style.display='none';
     resultDiv.style.display='block';
