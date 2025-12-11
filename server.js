@@ -10,7 +10,6 @@ app.use(express.static('public'));
 
 let games = {}; // gameId -> game state
 
-// Category words
 const categoryWords = {
     Food: ['Pizza','Burger','Sushi','Cake','Pasta'],
     Animals: ['Dog','Cat','Elephant','Lion','Tiger'],
@@ -29,10 +28,10 @@ io.on('connection', socket => {
             category,
             secretWord,
             players: [{id: socket.id, name: playerName, isImposter:false}],
-            imposterIndex: null,
             stage: 'waiting',
             votes: {},
-            chat: []
+            chat: [],
+            currentTurnIndex: 0
         };
         socket.join(gameId);
         callback(gameId);
@@ -56,9 +55,13 @@ io.on('connection', socket => {
     socket.on('startGame', (gameId) => {
         const game = games[gameId];
         if(!game || socket.id !== game.host) return;
-        game.imposterIndex = Math.floor(Math.random()*game.players.length);
-        game.players[game.imposterIndex].isImposter = true;
-        game.stage = 'chat';
+
+        const imposterIndex = Math.floor(Math.random()*game.players.length);
+        game.players[imposterIndex].isImposter = true;
+        game.stage = 'clues';
+        game.currentTurnIndex = 0;
+
+        // Send secret word / imposter category
         game.players.forEach(p => {
             if(p.isImposter){
                 io.to(p.id).emit('secretWord', `You are the Imposter! Category: ${game.category}`);
@@ -66,24 +69,31 @@ io.on('connection', socket => {
                 io.to(p.id).emit('secretWord', game.secretWord);
             }
         });
+
         io.to(gameId).emit('gameStarted');
+        io.to(gameId).emit('nextTurn', game.players[game.currentTurnIndex].name);
     });
 
-    // Chat messages
-    socket.on('sendChat', (gameId, message) => {
+    // Submit clue (turn-based)
+    socket.on('submitClue', (gameId, clue) => {
         const game = games[gameId];
-        const player = game.players.find(p => p.id === socket.id);
-        const chatMsg = {player: player.name, message};
-        game.chat.push(chatMsg);
-        io.to(gameId).emit('chatUpdate', chatMsg);
-    });
+        if(!game || game.stage !== 'clues') return;
 
-    // Start voting
-    socket.on('startVoting', (gameId) => {
-        const game = games[gameId];
-        if(!game) return;
-        game.stage = 'voting';
-        io.to(gameId).emit('startVoting', game.players.map(p => p.name));
+        const currentPlayer = game.players[game.currentTurnIndex];
+        if(currentPlayer.id !== socket.id) return; // only current turn can submit
+
+        game.chat.push({player: currentPlayer.name, message: clue});
+        io.to(gameId).emit('chatUpdate', {player: currentPlayer.name, message: clue});
+
+        // advance turn
+        game.currentTurnIndex++;
+        if(game.currentTurnIndex >= game.players.length){
+            // all players gave clues → start voting automatically
+            game.stage = 'voting';
+            io.to(gameId).emit('startVoting', game.players.map(p=>p.name));
+        } else {
+            io.to(gameId).emit('nextTurn', game.players[game.currentTurnIndex].name);
+        }
     });
 
     // Voting
