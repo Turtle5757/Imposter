@@ -98,8 +98,9 @@ socket.on('gameStarted', ()=>{
 // Next Turn
 socket.on('nextTurn', playerName=>{
     currentTurn = playerName;
+    const myName = playerNameInput.value.trim();
+    chatInput.disabled = (playerName !== myName);
     wordDisplay.textContent = `${playerName}'s turn to give a clue`;
-    chatInput.disabled = (playerName !== playerNameInput.value.trim());
 });
 
 // Submit Clue
