@@ -13,8 +13,7 @@ const roomListUl = document.getElementById('roomList');
 const lobbyDiv = document.getElementById('lobby');
 const playerListUl = document.getElementById('playerList');
 const startGameBtn = document.getElementById('startGameBtn');
-const startVotingBtn = document.getElementById('startVotingBtn');
-const nextRoundDiv = document.getElementById('nextRoundDiv');
+const hostButtonsDiv = document.getElementById('hostButtons');
 
 const gameDiv = document.getElementById('game');
 const wordDisplay = document.getElementById('wordDisplay');
@@ -123,47 +122,14 @@ socket.on('chatUpdate', msg=>{
 // Round Complete (host)
 socket.on('roundComplete', gameId=>{
   if(currentGameId !== gameId) return;
-  startVotingBtn.style.display='inline-block';
-  nextRoundDiv.innerHTML='';
-  if(socket.id === document.querySelector('#playerList li')?.id){
-    const nextBtn = document.createElement('button');
-    nextBtn.textContent = 'Next Clue Round';
-    nextBtn.onclick = ()=>{
-      socket.emit('startNextRound', gameId);
-      nextBtn.remove();
-      startVotingBtn.style.display='none';
-    };
-    nextRoundDiv.appendChild(nextBtn);
-  }
-});
 
-// Start Voting
-startVotingBtn.onclick = ()=> socket.emit('startVoting', currentGameId);
+  hostButtonsDiv.innerHTML='';
+  const nextBtn = document.createElement('button');
+  nextBtn.textContent = 'Next Clue Round';
+  nextBtn.onclick = ()=>{
+    socket.emit('startNextRound', gameId);
+    hostButtonsDiv.innerHTML='';
+  };
+  hostButtonsDiv.appendChild(nextBtn);
 
-socket.on('startVoting', players=>{
-  votingDiv.style.display='block';
-  voteButtonsDiv.innerHTML='';
-  players.forEach(name=>{
-    const btn = document.createElement('button');
-    btn.textContent = name;
-    btn.onclick = ()=>{
-      socket.emit('vote', currentGameId, name);
-      votingDiv.style.display='none';
-      wordDisplay.textContent='Waiting for results...';
-    };
-    voteButtonsDiv.appendChild(btn);
-  });
-});
-
-// Game Result
-socket.on('gameResult', data=>{
-  votingDiv.style.display='none';
-  resultDiv.style.display='block';
-  wordDisplay.textContent='';
-  let html = `<h2>Imposter: ${data.imposter}</h2>`;
-  html += `<h3>Voted Player: ${data.votedPlayer}</h3>`;
-  html += `<p>Secret Word: ${data.word}</p>`;
-  html += `<p>Clues:</p>`;
-  data.chat.forEach(c=> html+= `<p>${c.player}: ${c.message}</p>`);
-  resultDiv.innerHTML = html;
-});
+  const voteBtn = document.createE
