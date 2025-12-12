@@ -9,7 +9,6 @@ const io = new Server(server);
 app.use(express.static('public'));
 
 let games = {};
-
 const categoryWords = {
     Food: ['Pizza','Burger','Sushi','Cake','Pasta'],
     Animals: ['Dog','Cat','Elephant','Lion','Tiger'],
@@ -20,7 +19,6 @@ const categoryWords = {
 io.on('connection', socket => {
     console.log('User connected', socket.id);
 
-    // Create game
     socket.on('createGame', (playerName, category, callback) => {
         const gameId = Math.random().toString(36).substr(2,6).toUpperCase();
         const secretWord = categoryWords[category][Math.floor(Math.random()*categoryWords[category].length)];
@@ -40,7 +38,6 @@ io.on('connection', socket => {
         io.to(gameId).emit('updatePlayers', games[gameId].players);
     });
 
-    // Join game
     socket.on('joinGame', (gameId, playerName, callback) => {
         const game = games[gameId];
         if(game && game.players.length < 10){
@@ -48,12 +45,9 @@ io.on('connection', socket => {
             socket.join(gameId);
             io.to(gameId).emit('updatePlayers', game.players);
             callback({success:true});
-        } else {
-            callback({success:false, message:'Game full or not found'});
-        }
+        } else callback({success:false, message:'Game full or not found'});
     });
 
-    // Get active games
     socket.on('getActiveGames', callback => {
         const rooms = Object.keys(games).map(gameId => ({
             id: gameId,
@@ -73,6 +67,7 @@ io.on('connection', socket => {
         game.currentTurnIndex = 0;
         game.round = 1;
 
+        // Send secret word/imposter to each player **once**
         game.players.forEach(p => {
             if(p.isImposter){
                 io.to(p.id).emit('secretWord', `You are the Imposter! Category: ${game.category}`);
@@ -85,7 +80,7 @@ io.on('connection', socket => {
         io.to(gameId).emit('nextTurn', game.players[0].name);
     });
 
-    // Submit clue (turn-based)
+    // Submit clue
     socket.on('submitClue', (gameId, clue) => {
         const game = games[gameId];
         if(!game || game.stage !== 'clues') return;
@@ -93,6 +88,7 @@ io.on('connection', socket => {
         const player = game.players.find(p => p.id === socket.id);
         if(!player) return;
 
+        // Turn enforcement
         if(game.players[game.currentTurnIndex].id !== socket.id) return;
 
         game.chat.push({player: player.name, message: clue});
@@ -100,6 +96,7 @@ io.on('connection', socket => {
 
         game.currentTurnIndex++;
         if(game.currentTurnIndex >= game.players.length){
+            // All players gave clue this round
             io.to(game.host).emit('roundComplete', gameId);
         } else {
             io.to(gameId).emit('nextTurn', game.players[game.currentTurnIndex].name);
@@ -123,7 +120,7 @@ io.on('connection', socket => {
         io.to(gameId).emit('startVoting', game.players.map(p=>p.name));
     });
 
-    // Voting
+    // Vote
     socket.on('vote', (gameId, votedName) => {
         const game = games[gameId];
         if(game.stage !== 'voting') return;
@@ -145,7 +142,6 @@ io.on('connection', socket => {
         }
     });
 
-    // Disconnect
     socket.on('disconnect', () => {
         for(const gameId in games){
             let game = games[gameId];
