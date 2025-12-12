@@ -28,6 +28,7 @@ const resultDiv = document.getElementById('resultDiv');
 
 let currentGameId;
 let currentTurn = '';
+let mySecretWord = '';
 
 // Create game
 createBtn.onclick = () => {
@@ -84,16 +85,23 @@ socket.on('updatePlayers', players=>{
 
 // Start game
 startGameBtn.onclick = ()=>socket.emit('startGame', currentGameId);
-socket.on('secretWord', word => wordDisplay.textContent=word);
+
+// Receive secret word once
+socket.on('secretWord', word => {
+    mySecretWord = word;
+});
+
+// Game started
 socket.on('gameStarted', ()=> {
     lobbyDiv.style.display='none';
     gameDiv.style.display='block';
+    wordDisplay.textContent = mySecretWord; // show secret word once
 });
 
 // Next turn
 socket.on('nextTurn', playerName=>{
     currentTurn = playerName;
-    wordDisplay.textContent = `It's ${playerName}'s turn to give a clue`;
+    wordDisplay.textContent = `${playerName}'s turn to give a clue`;
 });
 
 // Submit clue
@@ -120,17 +128,19 @@ socket.on('chatUpdate', chatMsg=>{
 socket.on('roundComplete', gameId => {
     if(currentGameId !== gameId) return;
 
-    // Show host buttons
     startVotingBtn.style.display='inline-block';
     nextRoundDiv.innerHTML = '';
-    const nextRoundBtn = document.createElement('button');
-    nextRoundBtn.textContent='Next Clue Round';
-    nextRoundBtn.onclick = () => {
-        socket.emit('startNextRound', gameId);
-        nextRoundBtn.remove();
-        startVotingBtn.style.display='none';
-    };
-    nextRoundDiv.appendChild(nextRoundBtn);
+    // Host can start next round
+    if(socket.id === document.getElementById('playerList').querySelector('li')?.id){
+        const nextRoundBtn = document.createElement('button');
+        nextRoundBtn.textContent='Next Clue Round';
+        nextRoundBtn.onclick = () => {
+            socket.emit('startNextRound', gameId);
+            nextRoundBtn.remove();
+            startVotingBtn.style.display='none';
+        };
+        nextRoundDiv.appendChild(nextRoundBtn);
+    }
 });
 
 // Start voting
