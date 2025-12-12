@@ -1,136 +1,160 @@
-const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static("public"));
-
-const PORT = process.env.PORT || 3000;
+app.use(express.static('public'));
 
 let games = {};
 
-const categories = {
-  Fruits: ["Apple","Banana","Orange","Grapes","Mango"],
-  Animals: ["Dog","Cat","Elephant","Tiger","Horse"],
-  Colors: ["Red","Blue","Green","Yellow","Purple"]
+const categoryWords = {
+    Food: ['Pizza','Burger','Sushi','Cake','Pasta'],
+    Animals: ['Dog','Cat','Elephant','Lion','Tiger'],
+    Objects: ['Chair','Table','Phone','Book','Car']
 };
 
-function randomChoice(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
+// Socket events
+io.on('connection', socket => {
+    console.log('User connected', socket.id);
 
-io.on("connection", socket => {
-
-  socket.on("createGame", ({name}, cb) => {
-    const code = Math.random().toString(36).substring(2,7).toUpperCase();
-    const category = randomChoice(Object.keys(categories));
-    const word = randomChoice(categories[category]);
-    games[code] = {
-      host: socket.id,
-      players: [{id: socket.id, name}],
-      stage: "lobby",
-      roles: {},
-      currentTurn: 0,
-      clues: [],
-      round: 1,
-      word,
-      category,
-      votes: {}
-    };
-    socket.join(code);
-    cb({ok:true, code});
-    io.to(code).emit("playerList", games[code].players);
-  });
-
-  socket.on("joinGame", ({name, code}, cb) => {
-    const game = games[code];
-    if(!game) return cb({ok:false});
-    game.players.push({id:socket.id, name});
-    socket.join(code);
-    cb({ok:true});
-    io.to(code).emit("playerList", game.players);
-  });
-
-  socket.on("startGame", ({code}) => {
-    const game = games[code];
-    if(!game || socket.id !== game.host) return;
-
-    const impIndex = Math.floor(Math.random()*game.players.length);
-    game.players.forEach((p,i) => {
-      game.roles[p.id] = i===impIndex ? "imposter" : "normal";
-      io.to(p.id).emit("roleInfo", {
-        role: game.roles[p.id],
-        secretWord: game.roles[p.id]==="normal"?game.word:null,
-        category: game.category
-      });
+    // Create game
+    socket.on('createGame', (playerName, category, callback) => {
+        const gameId = Math.random().toString(36).substr(2,6).toUpperCase();
+        const secretWord = categoryWords[category][Math.floor(Math.random()*categoryWords[category].length)];
+        games[gameId] = {
+            host: socket.id,
+            category,
+            secretWord,
+            players: [{id: socket.id, name: playerName, isImposter:false}],
+            stage: 'waiting',
+            votes: {},
+            chat: [],
+            currentTurnIndex: 0,
+            round: 1
+        };
+        socket.join(gameId);
+        callback(gameId);
+        io.to(gameId).emit('updatePlayers', games[gameId].players);
     });
 
-    game.stage = "clues";
-    game.currentTurn = 0;
-    io.to(code).emit("gameStarted", {firstTurn: game.players[0].name});
-  });
+    // Join game
+    socket.on('joinGame', (gameId, playerName, callback) => {
+        const game = games[gameId];
+        if(game && game.players.length < 10){
+            game.players.push({id: socket.id, name: playerName, isImposter:false});
+            socket.join(gameId);
+            io.to(gameId).emit('updatePlayers', game.players);
+            callback({success:true});
+        } else {
+            callback({success:false, message:'Game full or not found'});
+        }
+    });
 
-  socket.on("submitClue", ({code, clue}) => {
-    const game = games[code];
-    if(!game || game.stage!=="clues") return;
-    const player = game.players[game.currentTurn];
-    if(socket.id !== player.id) return;
+    // Get active games
+    socket.on('getActiveGames', callback => {
+        const rooms = Object.keys(games).map(gameId => ({
+            id: gameId,
+            playerCount: games[gameId].players.length
+        }));
+        callback(rooms);
+    });
 
-    game.clues.push({name: player.name, clue});
-    io.to(code).emit("clueAdded", {name: player.name, clue});
+    // Start game
+    socket.on('startGame', (gameId) => {
+        const game = games[gameId];
+        if(!game || socket.id !== game.host) return;
 
-    game.currentTurn++;
-    if(game.currentTurn >= game.players.length){
-      io.to(code).emit("roundOptions", socket.id === game.host);
-    } else {
-      io.to(code).emit("nextTurn", {name: game.players[game.currentTurn].name});
-    }
-  });
+        const imposterIndex = Math.floor(Math.random()*game.players.length);
+        game.players[imposterIndex].isImposter = true;
+        game.stage = 'clues';
+        game.currentTurnIndex = 0;
+        game.round = 1;
 
-  socket.on("nextRound", ({code}) => {
-    const game = games[code];
-    if(!game) return;
-    game.currentTurn = 0;
-    game.round++;
-    game.clues = [];
-    io.to(code).emit("nextTurn", {name: game.players[0].name});
-  });
+        game.players.forEach(p => {
+            if(p.isImposter){
+                io.to(p.id).emit('secretWord', `You are the Imposter! Category: ${game.category}`);
+            } else {
+                io.to(p.id).emit('secretWord', game.secretWord);
+            }
+        });
 
-  socket.on("startVoting", ({code}) => {
-    const game = games[code];
-    if(!game) return;
-    game.stage = "voting";
-    io.to(code).emit("votingStarted", {players: game.players});
-  });
+        io.to(gameId).emit('gameStarted');
+        io.to(gameId).emit('nextTurn', game.players[0].name);
+    });
 
-  socket.on("votingMessage", ({code,name,msg}) => {
-    io.to(code).emit("votingChatUpdate", {name,msg});
-  });
+    // Submit clue (turn-based)
+    socket.on('submitClue', (gameId, clue) => {
+        const game = games[gameId];
+        if(!game || game.stage !== 'clues') return;
 
-  socket.on("vote", ({code,voter,target}) => {
-    const game = games[code];
-    if(!game) return;
-    game.votes[voter] = target;
+        const player = game.players.find(p => p.id === socket.id);
+        if(!player) return;
 
-    if(Object.keys(game.votes).length === game.players.length){
-      let tally = {};
-      Object.values(game.votes).forEach(t => { tally[t] = (tally[t]||0)+1 });
-      let maxVotes = 0, eliminated = "";
-      for(let p in tally){ if(tally[p] > maxVotes){ maxVotes = tally[p]; eliminated = p; } }
-      const imp = game.players.find(p => game.roles[p.id]==="imposter").name;
-      io.to(code).emit("votingResult", {eliminated, imposter: imp});
-    }
-  });
+        if(game.players[game.currentTurnIndex].id !== socket.id) return;
 
-  socket.on("disconnect", () => {
-    for(let code in games){
-      const game = games[code];
-      game.players = game.players.filter(p => p.id !== socket.id);
-      io.to(code).emit("playerList", game.players);
-    }
-  });
+        game.chat.push({player: player.name, message: clue});
+        io.to(gameId).emit('chatUpdate', {player: player.name, message: clue});
 
+        game.currentTurnIndex++;
+        if(game.currentTurnIndex >= game.players.length){
+            io.to(game.host).emit('roundComplete', gameId);
+        } else {
+            io.to(gameId).emit('nextTurn', game.players[game.currentTurnIndex].name);
+        }
+    });
+
+    // Start next clue round
+    socket.on('startNextRound', gameId => {
+        const game = games[gameId];
+        if(!game) return;
+        game.currentTurnIndex = 0;
+        game.round++;
+        io.to(gameId).emit('nextTurn', game.players[0].name);
+    });
+
+    // Start voting
+    socket.on('startVoting', gameId => {
+        const game = games[gameId];
+        if(!game) return;
+        game.stage = 'voting';
+        io.to(gameId).emit('startVoting', game.players.map(p=>p.name));
+    });
+
+    // Voting
+    socket.on('vote', (gameId, votedName) => {
+        const game = games[gameId];
+        if(game.stage !== 'voting') return;
+        game.votes[socket.id] = votedName;
+
+        if(Object.keys(game.votes).length === game.players.length){
+            const voteCounts = {};
+            Object.values(game.votes).forEach(v => voteCounts[v] = (voteCounts[v]||0)+1);
+            const maxVotes = Math.max(...Object.values(voteCounts));
+            const votedPlayer = Object.keys(voteCounts).find(k => voteCounts[k] === maxVotes);
+            const imposter = game.players.find(p => p.isImposter);
+
+            io.to(gameId).emit('gameResult', {
+                imposter: imposter.name,
+                votedPlayer,
+                word: game.secretWord,
+                chat: game.chat
+            });
+        }
+    });
+
+    // Disconnect
+    socket.on('disconnect', () => {
+        for(const gameId in games){
+            let game = games[gameId];
+            game.players = game.players.filter(p => p.id !== socket.id);
+            io.to(gameId).emit('updatePlayers', game.players);
+            if(game.players.length === 0) delete games[gameId];
+        }
+    });
 });
 
-server.listen(PORT, () => console.log("Server running on port", PORT));
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, ()=>console.log(`Server running on port ${PORT}`));
