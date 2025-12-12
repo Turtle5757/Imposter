@@ -1,40 +1,40 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Imposter Online</title>
-    <link rel="stylesheet" href="style.css"/>
+  <title>Imposter Online</title>
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
 <div id="lobby">
-    <input id="name" placeholder="Your name"/>
-    <button id="createBtn">Create Game</button>
-    <input id="joinCode" placeholder="Room code"/>
-    <button id="joinBtn">Join Game</button>
+  <input id="name" placeholder="Your name"/>
+  <button id="createBtn">Create Game</button>
+  <input id="joinCode" placeholder="Room code"/>
+  <button id="joinBtn">Join Game</button>
 </div>
 
 <div id="game" style="display:none">
-    <h1 id="roomCode"></h1>
-    <h2 id="role">Role:</h2>
-    <h2 id="turn">Turn:</h2>
-    <div id="players"></div>
-    <button id="startGameBtn">Start Game</button>
+  <h1 id="roomCode"></h1>
+  <h2 id="role">Role:</h2>
+  <h2 id="turn">Turn:</h2>
+  <div id="players"></div>
+  <button id="startGameBtn">Start Game</button>
 
-    <div id="chat"></div>
-    <input id="clueInput" placeholder="Your clue"/>
-    <button id="sendClue">Send Clue</button>
-    <div id="roundControls"></div>
+  <div id="chat"></div>
+  <input id="clueInput" placeholder="Your clue"/>
+  <button id="sendClue">Send Clue</button>
+  <div id="roundControls"></div>
 
-    <div id="voting" style="display:none">
-        <h2>Voting Phase</h2>
-        <div id="votingChat"></div>
-        <input id="voteInput" placeholder="Discuss..."/>
-        <button id="sendVoteMsg">Send</button>
+  <div id="voting" style="display:none">
+    <h2>Voting Phase</h2>
+    <div id="votingChat"></div>
+    <input id="voteInput" placeholder="Discuss..."/>
+    <button id="sendVoteMsg">Send</button>
 
-        <input id="voteTarget" placeholder="Player Name"/>
-        <button id="voteBtn">Vote</button>
-    </div>
+    <input id="voteTarget" placeholder="Player Name"/>
+    <button id="voteBtn">Vote</button>
+  </div>
 
-    <div id="result"></div>
+  <div id="result"></div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
