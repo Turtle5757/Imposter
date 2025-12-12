@@ -1,137 +1,128 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static('public'));
+app.use(express.static("public"));
 
-let games = {}; // gameId -> game state
+let games = {};
 
-const categoryWords = {
-    Food: ['Pizza','Burger','Sushi','Cake','Pasta'],
-    Animals: ['Dog','Cat','Elephant','Lion','Tiger'],
-    Objects: ['Chair','Table','Phone','Book','Car']
-};
+function createGame(hostId, hostName) {
+    const code = Math.random().toString(36).substring(2, 7).toUpperCase();
+    games[code] = {
+        hostId,
+        players: [{ id: hostId, name: hostName }],
+        stage: "lobby",
+        chat: [],
+        votingChat: [],
+        roles: {},
+        currentTurnIndex: 0
+    };
+    return code;
+}
 
-// Create game
-io.on('connection', socket => {
-    console.log('User connected', socket.id);
+io.on("connection", (socket) => {
 
-    socket.on('createGame', (playerName, category, callback) => {
-        const gameId = Math.random().toString(36).substr(2,6).toUpperCase();
-        const secretWord = categoryWords[category][Math.floor(Math.random()*categoryWords[category].length)];
-        games[gameId] = {
-            host: socket.id,
-            category,
-            secretWord,
-            players: [{id: socket.id, name: playerName, isImposter:false}],
-            stage: 'waiting',
-            votes: {},
-            chat: []
-        };
-        socket.join(gameId);
-        callback(gameId);
-        io.to(gameId).emit('updatePlayers', games[gameId].players);
+    // Create game room
+    socket.on("createGame", (name, callback) => {
+        const code = createGame(socket.id, name);
+        socket.join(code);
+        callback(code);
+        io.to(code).emit("playerList", games[code].players);
     });
 
-    // Join game
-    socket.on('joinGame', (gameId, playerName, callback) => {
-        const game = games[gameId];
-        if(game && game.players.length < 10){
-            game.players.push({id: socket.id, name: playerName, isImposter:false});
-            socket.join(gameId);
-            io.to(gameId).emit('updatePlayers', game.players);
-            callback({success:true});
-        } else {
-            callback({success:false, message:'Game full or not found'});
-        }
-    });
+    // Join existing game room
+    socket.on("joinGame", (code, name, callback) => {
+        const game = games[code];
+        if (!game) return callback(false);
 
-    // Get active games
-    socket.on('getActiveGames', callback => {
-        const rooms = Object.keys(games).map(gameId => ({
-            id: gameId,
-            playerCount: games[gameId].players.length
-        }));
-        callback(rooms);
+        game.players.push({ id: socket.id, name });
+        socket.join(code);
+        callback(true);
+
+        io.to(code).emit("playerList", game.players);
     });
 
     // Start game
-    socket.on('startGame', (gameId) => {
-        const game = games[gameId];
-        if(!game || socket.id !== game.host) return;
+    socket.on("startGame", (code) => {
+        const game = games[code];
+        if (!game) return;
 
-        const imposterIndex = Math.floor(Math.random()*game.players.length);
-        game.players[imposterIndex].isImposter = true;
-        game.stage = 'clues';
-
-        // Send secret word / imposter category
+        // assign roles
+        const imp = game.players[Math.floor(Math.random() * game.players.length)];
         game.players.forEach(p => {
-            if(p.isImposter){
-                io.to(p.id).emit('secretWord', `You are the Imposter! Category: ${game.category}`);
-            } else {
-                io.to(p.id).emit('secretWord', game.secretWord);
-            }
+            game.roles[p.id] = p.id === imp.id ? "imposter" : "word-holder";
         });
 
-        io.to(gameId).emit('gameStarted');
+        game.stage = "clues";
+        game.currentTurnIndex = 0;
+        io.to(code).emit("gameStarted");
+
+        io.to(code).emit("yourRole", game.roles[socket.id]);
+        io.to(code).emit("nextTurn", game.players[0].name);
     });
 
-    // Submit clue (multiple per player allowed)
-    socket.on('submitClue', (gameId, clue) => {
-        const game = games[gameId];
-        if(!game || game.stage !== 'clues') return;
+    // Submit clue (turn-based)
+    socket.on("submitClue", (code, clue) => {
+        const game = games[code];
+        if (!game) return;
 
-        const player = game.players.find(p => p.id === socket.id);
-        if(!player) return;
+        const turnPlayer = game.players[game.currentTurnIndex];
+        if (turnPlayer.id !== socket.id) return; 
 
-        game.chat.push({player: player.name, message: clue});
-        io.to(gameId).emit('chatUpdate', {player: player.name, message: clue});
-    });
+        game.chat.push({ player: turnPlayer.name, message: clue });
+        io.to(code).emit("chatUpdate", clue, turnPlayer.name);
 
-    // Start voting (host click or timer)
-    socket.on('startVoting', gameId => {
-        const game = games[gameId];
-        if(!game) return;
-        game.stage = 'voting';
-        io.to(gameId).emit('startVoting', game.players.map(p=>p.name));
-    });
+        game.currentTurnIndex++;
 
-    // Voting
-    socket.on('vote', (gameId, votedName) => {
-        const game = games[gameId];
-        if(game.stage !== 'voting') return;
-        game.votes[socket.id] = votedName;
-
-        if(Object.keys(game.votes).length === game.players.length){
-            const voteCounts = {};
-            Object.values(game.votes).forEach(v => voteCounts[v] = (voteCounts[v]||0)+1);
-            const maxVotes = Math.max(...Object.values(voteCounts));
-            const votedPlayer = Object.keys(voteCounts).find(k => voteCounts[k] === maxVotes);
-            const imposter = game.players.find(p => p.isImposter);
-
-            io.to(gameId).emit('gameResult', {
-                imposter: imposter.name,
-                votedPlayer,
-                word: game.secretWord,
-                chat: game.chat
-            });
+        if (game.currentTurnIndex >= game.players.length) {
+            io.to(code).emit("clueRoundOver");
+        } else {
+            io.to(code).emit(
+                "nextTurn",
+                game.players[game.currentTurnIndex].name
+            );
         }
     });
 
-    // Disconnect
-    socket.on('disconnect', () => {
-        for(const gameId in games){
-            let game = games[gameId];
+    // Host chooses "Next Round"
+    socket.on("nextRound", (code) => {
+        const game = games[code];
+        game.currentTurnIndex = 0;
+        io.to(code).emit("nextTurn", game.players[0].name);
+    });
+
+    // Host chooses "Start Voting"
+    socket.on("startVoting", (code) => {
+        const game = games[code];
+        game.stage = "voting";
+        io.to(code).emit(
+            "startVoting",
+            game.players.map((p) => ({ id: p.id, name: p.name }))
+        );
+    });
+
+    // Voting chat
+    socket.on("sendVotingMessage", (code, msg) => {
+        const game = games[code];
+        if (!game) return;
+
+        const player = game.players.find(p => p.id === socket.id);
+        game.votingChat.push({ player: player.name, message: msg });
+
+        io.to(code).emit("votingChatUpdate", player.name, msg);
+    });
+
+    socket.on("disconnect", () => {
+        for (const code in games) {
+            const game = games[code];
             game.players = game.players.filter(p => p.id !== socket.id);
-            io.to(gameId).emit('updatePlayers', game.players);
-            if(game.players.length === 0) delete games[gameId];
+
+            io.to(code).emit("playerList", game.players);
         }
     });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, ()=>console.log(`Server running on port ${PORT}`));
+server.listen(3000, () => console.log("Server running on port 3000"));
