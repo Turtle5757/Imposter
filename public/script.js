@@ -1,139 +1,121 @@
 const socket = io();
+let currentRole = "";
+let currentGameCode = "";
+let hostId = "";
 
-const createBtn = document.getElementById('createBtn');
-const showRoomsBtn = document.getElementById('showRoomsBtn');
-const refreshRoomsBtn = document.getElementById('refreshRoomsBtn');
-const playerNameInput = document.getElementById('playerName');
-const categorySelect = document.getElementById('categorySelect');
+const lobbyDiv = document.getElementById("lobby");
+const gameDiv = document.getElementById("game");
+const chatBox = document.getElementById("chat");
+const votingChatBox = document.getElementById("votingChat");
+const clueInput = document.getElementById("clueInput");
+const votingInput = document.getElementById("votingInput");
 
-const menuDiv = document.getElementById('menu');
-const roomListDiv = document.getElementById('roomListDiv');
-const roomListUl = document.getElementById('roomList');
-
-const lobbyDiv = document.getElementById('lobby');
-const playerListUl = document.getElementById('playerList');
-const startGameBtn = document.getElementById('startGameBtn');
-const startVotingBtn = document.getElementById('startVotingBtn');
-
-const gameDiv = document.getElementById('game');
-const gameIdDisplay = document.getElementById('gameIdDisplay');
-const wordDisplay = document.getElementById('wordDisplay');
-const chatBox = document.getElementById('chatBox');
-const chatInput = document.getElementById('chatInput');
-const sendChatBtn = document.getElementById('sendChatBtn');
-const votingDiv = document.getElementById('votingDiv');
-const voteButtonsDiv = document.getElementById('voteButtons');
-const resultDiv = document.getElementById('resultDiv');
-
-let currentGameId;
-
-// Create game
-createBtn.onclick = () => {
-    const name = playerNameInput.value.trim();
-    const category = categorySelect.value;
-    if(!name) return alert('Enter your name');
-    socket.emit('createGame', name, category, (gameId)=>{
-        currentGameId = gameId;
-        menuDiv.style.display='none';
-        lobbyDiv.style.display='block';
-        gameIdDisplay.textContent=gameId;
+// Create Game
+document.getElementById("createBtn").onclick = () => {
+    const name = document.getElementById("name").value;
+    socket.emit("createGame", name, (code) => {
+        currentGameCode = code;
+        hostId = socket.id;
+        lobbyDiv.style.display = "none";
+        gameDiv.style.display = "block";
+        document.getElementById("roomCode").innerText = "Room: " + code;
     });
 };
 
-// Show available rooms
-showRoomsBtn.onclick = () => {
-    roomListDiv.style.display='block';
-    socket.emit('getActiveGames', rooms => {
-        roomListUl.innerHTML = '';
-        rooms.forEach(r => {
-            const li = document.createElement('li');
-            li.textContent = `Room ${r.id} (${r.playerCount}/10)`;
-            li.onclick = () => joinRoom(r.id);
-            roomListUl.appendChild(li);
-        });
+// Join Game
+document.getElementById("joinBtn").onclick = () => {
+    const name = document.getElementById("name").value;
+    const code = document.getElementById("joinCode").value.toUpperCase();
+
+    socket.emit("joinGame", code, name, (success) => {
+        if (!success) return alert("Room not found.");
+
+        currentGameCode = code;
+        lobbyDiv.style.display = "none";
+        gameDiv.style.display = "block";
+        document.getElementById("roomCode").innerText = "Room: " + code;
     });
 };
 
-// Refresh rooms
-refreshRoomsBtn.onclick = showRoomsBtn.onclick;
+// Start game (host only)
+document.getElementById("startGameBtn").onclick = () => {
+    socket.emit("startGame", currentGameCode);
+};
 
-// Join room
-function joinRoom(gameId){
-    const name = playerNameInput.value.trim();
-    if(!name) return alert('Enter your name');
-    socket.emit('joinGame', gameId, name, res => {
-        if(res.success){
-            currentGameId = gameId;
-            menuDiv.style.display='none';
-            lobbyDiv.style.display='block';
-            gameIdDisplay.textContent=currentGameId;
-            roomListDiv.style.display='none';
-        } else alert(res.message);
-    });
-}
-
-// Update players
-socket.on('updatePlayers', players=>{
-    playerListUl.innerHTML='';
-    players.forEach(p=>{
-        const li = document.createElement('li');
-        li.textContent=p.name;
-        playerListUl.appendChild(li);
-    });
+// Role received (HIDE it during clues)
+socket.on("yourRole", (role) => {
+    currentRole = role;
 });
 
-// Start game
-startGameBtn.onclick = ()=>socket.emit('startGame', currentGameId);
-socket.on('secretWord', word => wordDisplay.textContent=word);
-socket.on('gameStarted', ()=> {
-    lobbyDiv.style.display='none';
-    gameDiv.style.display='block';
+// Game started
+socket.on("gameStarted", () => {
+    document.getElementById("roleDisplay").innerText =
+        "Role: hidden during clues";
+});
+
+// Chat updates during clues
+socket.on("chatUpdate", (msg, name) => {
+    chatBox.innerHTML += `<p><b>${name}:</b> ${msg}</p>`;
+});
+
+// Next turn
+socket.on("nextTurn", (name) => {
+    document.getElementById("turnDisplay").innerText = name + "'s turn";
+
+    clueInput.disabled = name !== getMyName();
+});
+
+// END OF ROUND OPTIONS
+socket.on("clueRoundOver", () => {
+    if (socket.id === hostId) {
+        chatBox.innerHTML += `
+            <div id="roundControl">
+                <button id="nextRoundBtn">Next Round</button>
+                <button id="startVotingBtn">Start Voting</button>
+            </div>
+        `;
+
+        document.getElementById("nextRoundBtn").onclick = () => {
+            socket.emit("nextRound", currentGameCode);
+            document.getElementById("roundControl").remove();
+        };
+
+        document.getElementById("startVotingBtn").onclick = () => {
+            socket.emit("startVoting", currentGameCode);
+            document.getElementById("roundControl").remove();
+        };
+    }
 });
 
 // Submit clue
-sendChatBtn.onclick = () => {
-    const clue = chatInput.value.trim();
-    if(!clue) return;
-    socket.emit('submitClue', currentGameId, clue);
-    chatInput.value='';
+document.getElementById("sendClue").onclick = () => {
+    const msg = clueInput.value.trim();
+    if (!msg) return;
+
+    socket.emit("submitClue", currentGameCode, msg);
+    clueInput.value = "";
 };
 
-// Chat updates
-socket.on('chatUpdate', chatMsg=>{
-    const p = document.createElement('p');
-    p.textContent = `${chatMsg.player}: ${chatMsg.message}`;
-    chatBox.appendChild(p);
-    chatBox.scrollTop = chatBox.scrollHeight;
+// Begin voting phase
+socket.on("startVoting", (playerList) => {
+    document.getElementById("votingSection").style.display = "block";
+    document.getElementById("roleDisplay").innerText = "Role: " + currentRole;
 });
 
-// Start voting
-startVotingBtn.onclick = () => socket.emit('startVoting', currentGameId);
+// Voting chat
+document.getElementById("sendVotingMsg").onclick = () => {
+    const msg = votingInput.value.trim();
+    if (!msg) return;
 
-// Voting
-socket.on('startVoting', playerNames=>{
-    votingDiv.style.display='block';
-    voteButtonsDiv.innerHTML='';
-    playerNames.forEach(name=>{
-        const btn = document.createElement('button');
-        btn.textContent=name;
-        btn.onclick = () => {
-            socket.emit('vote', currentGameId, name);
-            votingDiv.style.display='none';
-            wordDisplay.textContent='Waiting for results...';
-        };
-        voteButtonsDiv.appendChild(btn);
-    });
+    socket.emit("sendVotingMessage", currentGameCode, msg);
+    votingInput.value = "";
+};
+
+socket.on("votingChatUpdate", (name, msg) => {
+    votingChatBox.innerHTML += `<p><b>${name}:</b> ${msg}</p>`;
 });
 
-// Game result
-socket.on('gameResult', data=>{
-    votingDiv.style.display='none';
-    resultDiv.style.display='block';
-    wordDisplay.textContent='';
-    let html = `<h2>Imposter: ${data.imposter}</h2>`;
-    html += `<h3>Voted Player: ${data.votedPlayer}</h3>`;
-    html += `<p>Secret Word: ${data.word}</p>`;
-    html += `<p>Clues:</p>`;
-    data.chat.forEach(c=>html+=`<p>${c.player}: ${c.message}</p>`);
-    resultDiv.innerHTML = html;
-});
+function getMyName() {
+    const name = document.getElementById("name").value;
+    return name;
+}
