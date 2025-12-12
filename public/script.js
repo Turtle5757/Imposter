@@ -99,6 +99,7 @@ socket.on('gameStarted', ()=>{
 socket.on('nextTurn', playerName=>{
     currentTurn = playerName;
     wordDisplay.textContent = `${playerName}'s turn to give a clue`;
+    chatInput.disabled = (playerName !== playerNameInput.value.trim());
 });
 
 // Submit Clue
@@ -123,7 +124,7 @@ socket.on('roundComplete', gameId=>{
     if(currentGameId !== gameId) return;
     startVotingBtn.style.display='inline-block';
     nextRoundDiv.innerHTML = '';
-    if(socket.id === document.getElementById('playerList').querySelector('li')?.id){
+    if(socket.id === document.querySelector('#playerList li')?.id){
         const nextBtn = document.createElement('button');
         nextBtn.textContent = 'Next Clue Round';
         nextBtn.onclick = ()=>{
