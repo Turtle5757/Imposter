@@ -31,139 +31,139 @@ let mySecretWord = '';
 
 // Create Game
 createBtn.onclick = () => {
-    const name = playerNameInput.value.trim();
-    const category = categorySelect.value;
-    if(!name) return alert('Enter your name');
-    socket.emit('createGame', name, category, gameId => {
-        currentGameId = gameId;
-        menuDiv.style.display='none';
-        lobbyDiv.style.display='block';
-        document.getElementById('gameIdDisplay').textContent = gameId;
-    });
+  const name = playerNameInput.value.trim();
+  const category = categorySelect.value;
+  if(!name) return alert('Enter your name');
+  socket.emit('createGame', name, category, gameId=>{
+    currentGameId = gameId;
+    menuDiv.style.display='none';
+    lobbyDiv.style.display='block';
+    document.getElementById('gameIdDisplay').textContent = gameId;
+  });
 };
 
 // Show Rooms
 showRoomsBtn.onclick = () => {
-    roomListDiv.style.display='block';
-    socket.emit('getActiveGames', rooms => {
-        roomListUl.innerHTML = '';
-        rooms.forEach(r=>{
-            const li = document.createElement('li');
-            li.textContent = `Room ${r.id} (${r.playerCount}/10)`;
-            li.onclick = () => joinRoom(r.id);
-            roomListUl.appendChild(li);
-        });
+  roomListDiv.style.display='block';
+  socket.emit('getActiveGames', rooms=>{
+    roomListUl.innerHTML='';
+    rooms.forEach(r=>{
+      const li = document.createElement('li');
+      li.textContent = `Room ${r.id} (${r.playerCount}/10)`;
+      li.onclick = ()=> joinRoom(r.id);
+      roomListUl.appendChild(li);
     });
+  });
 };
 refreshRoomsBtn.onclick = showRoomsBtn.onclick;
 
 // Join Room
 function joinRoom(gameId){
-    const name = playerNameInput.value.trim();
-    if(!name) return alert('Enter your name');
-    socket.emit('joinGame', gameId, name, res=>{
-        if(res.success){
-            currentGameId = gameId;
-            menuDiv.style.display='none';
-            lobbyDiv.style.display='block';
-            document.getElementById('gameIdDisplay').textContent = gameId;
-            roomListDiv.style.display='none';
-        } else alert(res.message);
-    });
+  const name = playerNameInput.value.trim();
+  if(!name) return alert('Enter your name');
+  socket.emit('joinGame', gameId, name, res=>{
+    if(res.success){
+      currentGameId = gameId;
+      menuDiv.style.display='none';
+      lobbyDiv.style.display='block';
+      document.getElementById('gameIdDisplay').textContent = gameId;
+      roomListDiv.style.display='none';
+    } else alert(res.message);
+  });
 }
 
-// Update players
+// Update Players
 socket.on('updatePlayers', players=>{
-    playerListUl.innerHTML='';
-    players.forEach(p=>{
-        const li = document.createElement('li');
-        li.textContent = p.name;
-        playerListUl.appendChild(li);
-    });
+  playerListUl.innerHTML='';
+  players.forEach(p=>{
+    const li = document.createElement('li');
+    li.textContent = p.name;
+    playerListUl.appendChild(li);
+  });
 });
 
 // Start Game
-startGameBtn.onclick = ()=>socket.emit('startGame', currentGameId);
+startGameBtn.onclick = ()=> socket.emit('startGame', currentGameId);
 
 // Receive secret word once
-socket.on('secretWord', word => mySecretWord = word);
+socket.on('secretWord', word=> mySecretWord = word);
 
 // Game Started
 socket.on('gameStarted', ()=>{
-    lobbyDiv.style.display='none';
-    gameDiv.style.display='block';
-    wordDisplay.textContent = mySecretWord;
+  lobbyDiv.style.display='none';
+  gameDiv.style.display='block';
+  wordDisplay.textContent = mySecretWord;
 });
 
 // Next Turn
 socket.on('nextTurn', playerName=>{
-    currentTurn = playerName;
-    const myName = playerNameInput.value.trim();
-    chatInput.disabled = (playerName !== myName);
-    wordDisplay.textContent = `${playerName}'s turn to give a clue`;
+  currentTurn = playerName;
+  const myName = playerNameInput.value.trim();
+  chatInput.disabled = (playerName !== myName);
+  wordDisplay.textContent = `${playerName}'s turn to give a clue`;
 });
 
 // Submit Clue
-sendChatBtn.onclick = () => {
-    if(currentTurn !== playerNameInput.value.trim()) return alert("Not your turn!");
-    const clue = chatInput.value.trim();
-    if(!clue) return;
-    socket.emit('submitClue', currentGameId, clue);
-    chatInput.value='';
+sendChatBtn.onclick = ()=>{
+  if(currentTurn !== playerNameInput.value.trim()) return alert("Not your turn!");
+  const clue = chatInput.value.trim();
+  if(!clue) return;
+  socket.emit('submitClue', currentGameId, clue);
+  chatInput.value='';
 };
 
-// Chat update
+// Chat Update
 socket.on('chatUpdate', msg=>{
-    const p = document.createElement('p');
-    p.textContent = `${msg.player}: ${msg.message}`;
-    chatBox.appendChild(p);
-    chatBox.scrollTop = chatBox.scrollHeight;
+  const p = document.createElement('p');
+  p.textContent = `${msg.player}: ${msg.message}`;
+  chatBox.appendChild(p);
+  chatBox.scrollTop = chatBox.scrollHeight;
 });
 
-// Round complete (host)
+// Round Complete (host)
 socket.on('roundComplete', gameId=>{
-    if(currentGameId !== gameId) return;
-    startVotingBtn.style.display='inline-block';
-    nextRoundDiv.innerHTML = '';
-    if(socket.id === document.querySelector('#playerList li')?.id){
-        const nextBtn = document.createElement('button');
-        nextBtn.textContent = 'Next Clue Round';
-        nextBtn.onclick = ()=>{
-            socket.emit('startNextRound', gameId);
-            nextBtn.remove();
-            startVotingBtn.style.display='none';
-        };
-        nextRoundDiv.appendChild(nextBtn);
-    }
+  if(currentGameId !== gameId) return;
+  startVotingBtn.style.display='inline-block';
+  nextRoundDiv.innerHTML='';
+  if(socket.id === document.querySelector('#playerList li')?.id){
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = 'Next Clue Round';
+    nextBtn.onclick = ()=>{
+      socket.emit('startNextRound', gameId);
+      nextBtn.remove();
+      startVotingBtn.style.display='none';
+    };
+    nextRoundDiv.appendChild(nextBtn);
+  }
 });
 
-// Start voting
+// Start Voting
 startVotingBtn.onclick = ()=> socket.emit('startVoting', currentGameId);
 
 socket.on('startVoting', players=>{
-    votingDiv.style.display='block';
-    voteButtonsDiv.innerHTML='';
-    players.forEach(name=>{
-        const btn = document.createElement('button');
-        btn.textContent = name;
-        btn.onclick = () => {
-            socket.emit('vote', currentGameId, name);
-            votingDiv.style.display='none';
-            wordDisplay.textContent='Waiting for results...';
-        };
-        voteButtonsDiv.appendChild(btn);
-    });
+  votingDiv.style.display='block';
+  voteButtonsDiv.innerHTML='';
+  players.forEach(name=>{
+    const btn = document.createElement('button');
+    btn.textContent = name;
+    btn.onclick = ()=>{
+      socket.emit('vote', currentGameId, name);
+      votingDiv.style.display='none';
+      wordDisplay.textContent='Waiting for results...';
+    };
+    voteButtonsDiv.appendChild(btn);
+  });
 });
 
-// Game result
+// Game Result
 socket.on('gameResult', data=>{
-    votingDiv.style.display='none';
-    resultDiv.style.display='block';
-    wordDisplay.textContent='';
-    let html = `<h2>Imposter: ${data.imposter}</h2>`;
-    html += `<h3>Voted Player: ${data.votedPlayer}</h3>`;
-    html += `<p>Secret Word: ${data.word}</p>`;
-    html += `<p>Clues:</p>`;
-    data.chat.forEach(c=> html+=`<p>${c.player}: ${c.message}</p>`);
-    resultDiv.innerHTML = html;
+  votingDiv.style.display='none';
+  resultDiv.style.display='block';
+  wordDisplay.textContent='';
+  let html = `<h2>Imposter: ${data.imposter}</h2>`;
+  html += `<h3>Voted Player: ${data.votedPlayer}</h3>`;
+  html += `<p>Secret Word: ${data.word}</p>`;
+  html += `<p>Clues:</p>`;
+  data.chat.forEach(c=> html+= `<p>${c.player}: ${c.message}</p>`);
+  resultDiv.innerHTML = html;
 });
