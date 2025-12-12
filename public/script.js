@@ -1,121 +1,125 @@
 const socket = io();
-let currentRole = "";
-let currentGameCode = "";
-let hostId = "";
 
-const lobbyDiv = document.getElementById("lobby");
-const gameDiv = document.getElementById("game");
-const chatBox = document.getElementById("chat");
-const votingChatBox = document.getElementById("votingChat");
-const clueInput = document.getElementById("clueInput");
-const votingInput = document.getElementById("votingInput");
+let myName = "";
+let myRole = "";
+let myGame = "";
 
-// Create Game
 document.getElementById("createBtn").onclick = () => {
-    const name = document.getElementById("name").value;
-    socket.emit("createGame", name, (code) => {
-        currentGameCode = code;
-        hostId = socket.id;
-        lobbyDiv.style.display = "none";
-        gameDiv.style.display = "block";
-        document.getElementById("roomCode").innerText = "Room: " + code;
+    myName = document.getElementById("name").value;
+    socket.emit("createGame", { name: myName }, (res) => {
+        if (!res.ok) return;
+        myGame = res.code;
+        showGameScreen(res.code);
     });
 };
 
-// Join Game
 document.getElementById("joinBtn").onclick = () => {
-    const name = document.getElementById("name").value;
+    myName = document.getElementById("name").value;
     const code = document.getElementById("joinCode").value.toUpperCase();
-
-    socket.emit("joinGame", code, name, (success) => {
-        if (!success) return alert("Room not found.");
-
-        currentGameCode = code;
-        lobbyDiv.style.display = "none";
-        gameDiv.style.display = "block";
-        document.getElementById("roomCode").innerText = "Room: " + code;
+    socket.emit("joinGame", { name: myName, code }, (res) => {
+        if (!res.ok) return alert("Invalid code");
+        myGame = code;
+        showGameScreen(code);
     });
 };
 
-// Start game (host only)
+function showGameScreen(code) {
+    document.getElementById("lobby").style.display = "none";
+    document.getElementById("game").style.display = "block";
+    document.getElementById("roomCode").innerText = "Room: " + code;
+}
+
+socket.on("playerList", (list) => {
+    const box = document.getElementById("players");
+    box.innerHTML = list.map(p => `<p>${p.name}</p>`).join("");
+});
+
+// START GAME (host)
 document.getElementById("startGameBtn").onclick = () => {
-    socket.emit("startGame", currentGameCode);
+    socket.emit("startGame", { code: myGame });
 };
 
-// Role received (HIDE it during clues)
-socket.on("yourRole", (role) => {
-    currentRole = role;
+// Receive role
+socket.on("roleInfo", ({ role, secretWord, category }) => {
+    myRole = role;
+    document.getElementById("role").innerText =
+        "Role: HIDDEN (until voting)";
 });
 
 // Game started
-socket.on("gameStarted", () => {
-    document.getElementById("roleDisplay").innerText =
-        "Role: hidden during clues";
+socket.on("gameStarted", ({ firstTurn }) => {
+    document.getElementById("turn").innerText = "Turn: " + firstTurn;
 });
 
-// Chat updates during clues
-socket.on("chatUpdate", (msg, name) => {
-    chatBox.innerHTML += `<p><b>${name}:</b> ${msg}</p>`;
+// Add clue to chat
+socket.on("clueAdded", ({ name, clue }) => {
+    const box = document.getElementById("chat");
+    box.innerHTML += `<p><b>${name}:</b> ${clue}</p>`;
 });
 
 // Next turn
-socket.on("nextTurn", (name) => {
-    document.getElementById("turnDisplay").innerText = name + "'s turn";
-
-    clueInput.disabled = name !== getMyName();
+socket.on("nextTurn", ({ name }) => {
+    document.getElementById("turn").innerText = "Turn: " + name;
 });
 
-// END OF ROUND OPTIONS
-socket.on("clueRoundOver", () => {
-    if (socket.id === hostId) {
-        chatBox.innerHTML += `
-            <div id="roundControl">
-                <button id="nextRoundBtn">Next Round</button>
-                <button id="startVotingBtn">Start Voting</button>
-            </div>
+// Send clue
+document.getElementById("sendClue").onclick = () => {
+    const clue = document.getElementById("clueInput").value.trim();
+    if (!clue) return;
+
+    socket.emit("submitClue", {
+        code: myGame,
+        clue
+    });
+
+    document.getElementById("clueInput").value = "";
+};
+
+// Round options (host only)
+socket.on("roundOptions", (isHost) => {
+    const box = document.getElementById("roundControls");
+    box.innerHTML = "";
+
+    if (isHost) {
+        box.innerHTML = `
+            <button id="nextR">Next Round</button>
+            <button id="vote">Start Voting</button>
         `;
 
-        document.getElementById("nextRoundBtn").onclick = () => {
-            socket.emit("nextRound", currentGameCode);
-            document.getElementById("roundControl").remove();
+        document.getElementById("nextR").onclick = () => {
+            socket.emit("nextRound", { code: myGame });
+            box.innerHTML = "";
         };
 
-        document.getElementById("startVotingBtn").onclick = () => {
-            socket.emit("startVoting", currentGameCode);
-            document.getElementById("roundControl").remove();
+        document.getElementById("vote").onclick = () => {
+            socket.emit("startVoting", { code: myGame });
+            box.innerHTML = "";
         };
     }
 });
 
-// Submit clue
-document.getElementById("sendClue").onclick = () => {
-    const msg = clueInput.value.trim();
-    if (!msg) return;
+// Voting started
+socket.on("votingStarted", ({ players }) => {
+    document.getElementById("role").innerText = "Role: " + myRole;
 
-    socket.emit("submitClue", currentGameCode, msg);
-    clueInput.value = "";
-};
-
-// Begin voting phase
-socket.on("startVoting", (playerList) => {
-    document.getElementById("votingSection").style.display = "block";
-    document.getElementById("roleDisplay").innerText = "Role: " + currentRole;
+    document.getElementById("voting").style.display = "block";
 });
 
 // Voting chat
-document.getElementById("sendVotingMsg").onclick = () => {
-    const msg = votingInput.value.trim();
+document.getElementById("sendVoteMsg").onclick = () => {
+    const msg = document.getElementById("voteInput").value;
     if (!msg) return;
 
-    socket.emit("sendVotingMessage", currentGameCode, msg);
-    votingInput.value = "";
+    socket.emit("votingMessage", {
+        code: myGame,
+        name: myName,
+        msg
+    });
+
+    document.getElementById("voteInput").value = "";
 };
 
-socket.on("votingChatUpdate", (name, msg) => {
-    votingChatBox.innerHTML += `<p><b>${name}:</b> ${msg}</p>`;
+socket.on("votingChatUpdate", ({ name, msg }) => {
+    const b = document.getElementById("votingChat");
+    b.innerHTML += `<p><b>${name}:</b> ${msg}</p>`;
 });
-
-function getMyName() {
-    const name = document.getElementById("name").value;
-    return name;
-}
