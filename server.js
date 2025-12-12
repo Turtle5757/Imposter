@@ -1,29 +1,28 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static('public'));
+app.use(express.static("public"));
 
 let rooms = {};
-
-function getRandom(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-const WORDS = [
+let WORDS = [
   { category: "Food", words: ["Pizza", "Burger", "Pasta"] },
   { category: "Animal", words: ["Dog", "Lion", "Eagle"] },
   { category: "Vehicle", words: ["Car", "Boat", "Bike"] }
 ];
 
+function getRandom(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
 io.on("connection", (socket) => {
 
   socket.on("createRoom", () => {
-    const roomId = Math.random().toString(36).substring(2, 7);
+    const roomId = Math.random().toString(36).substring(2, 7).toUpperCase();
     rooms[roomId] = {
       host: socket.id,
       players: {},
@@ -34,7 +33,7 @@ io.on("connection", (socket) => {
       votes: {}
     };
     socket.join(roomId);
-    rooms[roomId].players[socket.id] = { name: "Player", ready: false };
+    rooms[roomId].players[socket.id] = { name: "Host", ready: false };
     socket.emit("roomCreated", roomId);
     io.to(roomId).emit("roomUpdate", rooms[roomId]);
   });
@@ -57,8 +56,7 @@ io.on("connection", (socket) => {
 
   socket.on("startGame", ({ roomId }) => {
     const room = rooms[roomId];
-    if (!room) return;
-    if (socket.id !== room.host) return;
+    if (!room || socket.id !== room.host) return;
 
     const pids = Object.keys(room.players);
     if (pids.length < 3) return;
@@ -75,7 +73,7 @@ io.on("connection", (socket) => {
     room.turnIndex = 0;
     room.clues = [];
 
-    // Send roles
+    // Assign roles
     pids.forEach(pid => {
       if (pid === imposter) {
         io.to(pid).emit("role", { role: "imposter", category: room.category });
@@ -94,16 +92,14 @@ io.on("connection", (socket) => {
     const room = rooms[roomId];
     if (!room || room.state !== "clues") return;
 
-    room.clues.push({ player: socket.id, text: clue });
+    room.clues.push({ player: room.players[socket.id].name, text: clue });
 
-    // Advance turn
+    // advance turn
     room.turnIndex++;
-    if (room.turnIndex >= room.turnOrder.length) {
-      room.turnIndex = 0;
-    }
+    if (room.turnIndex >= room.turnOrder.length) room.turnIndex = 0;
 
     io.to(roomId).emit("newTurn", {
-      player: room.turnOrder[room.turnIndex],
+      player: room.players[room.turnOrder[room.turnIndex]].name,
       clues: room.clues
     });
   });
@@ -132,7 +128,7 @@ io.on("connection", (socket) => {
         tally[v] = (tally[v] || 0) + 1;
       });
 
-      let votedOut = Object.entries(tally).sort((a, b) => b[1] - a[1])[0][0];
+      let votedOut = Object.entries(tally).sort((a,b)=>b[1]-a[1])[0][0];
 
       io.to(roomId).emit("results", {
         votedOut,
@@ -143,4 +139,5 @@ io.on("connection", (socket) => {
 
 });
 
-server.listen(3000, () => console.log("Server running"));
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
