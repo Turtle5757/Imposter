@@ -1,24 +1,13 @@
 {
   "name": "imposter-online",
   "version": "1.0.0",
-  "description": "Online Imposter game clone with chat and voting",
+  "description": "Online Imposter party game",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "socket.io": "^4.7.2"
-  },
-  "engines": {
-    "node": ">=18"
-  },
-  "keywords": [
-    "imposter",
-    "multiplayer",
-    "game",
-    "socket.io"
-  ],
-  "author": "Your Name",
-  "license": "MIT"
+    "socket.io": "^4.7.5"
+  }
 }
