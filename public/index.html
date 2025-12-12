@@ -10,40 +10,40 @@
 <h1>Imposter Online</h1>
 
 <div id="menu">
-    <input type="text" id="playerName" placeholder="Your Name">
-    <select id="categorySelect">
-        <option value="Food">Food</option>
-        <option value="Animals">Animals</option>
-        <option value="Objects">Objects</option>
-    </select>
-    <button id="createBtn">Create Game</button>
-    <button id="showRoomsBtn">Show Rooms</button>
-    <div id="roomListDiv" style="display:none;">
-        <ul id="roomList"></ul>
-        <button id="refreshRoomsBtn">Refresh</button>
-    </div>
+  <input type="text" id="playerName" placeholder="Your Name">
+  <select id="categorySelect">
+    <option value="Food">Food</option>
+    <option value="Animals">Animals</option>
+    <option value="Objects">Objects</option>
+  </select>
+  <button id="createBtn">Create Game</button>
+  <button id="showRoomsBtn">Show Rooms</button>
+  <div id="roomListDiv" style="display:none;">
+    <ul id="roomList"></ul>
+    <button id="refreshRoomsBtn">Refresh</button>
+  </div>
 </div>
 
 <div id="lobby" style="display:none;">
-    <h2>Lobby - Game ID: <span id="gameIdDisplay"></span></h2>
-    <ul id="playerList"></ul>
-    <button id="startGameBtn">Start Game</button>
-    <button id="startVotingBtn" style="display:none;">Start Voting</button>
-    <div id="nextRoundDiv"></div>
+  <h2>Lobby - Game ID: <span id="gameIdDisplay"></span></h2>
+  <ul id="playerList"></ul>
+  <button id="startGameBtn">Start Game</button>
+  <button id="startVotingBtn" style="display:none;">Start Voting</button>
+  <div id="nextRoundDiv"></div>
 </div>
 
 <div id="game" style="display:none;">
-    <h2 id="wordDisplay"></h2>
-    <div id="chatDiv">
-        <div id="chatBox"></div>
-        <input type="text" id="chatInput" placeholder="Type clue">
-        <button id="sendChatBtn">Send</button>
-    </div>
-    <div id="votingDiv" style="display:none;">
-        <p>Vote for Imposter:</p>
-        <div id="voteButtons"></div>
-    </div>
-    <div id="resultDiv" style="display:none;"></div>
+  <h2 id="wordDisplay"></h2>
+  <div id="chatDiv">
+    <div id="chatBox"></div>
+    <input type="text" id="chatInput" placeholder="Type clue">
+    <button id="sendChatBtn">Send</button>
+  </div>
+  <div id="votingDiv" style="display:none;">
+    <p>Vote for Imposter:</p>
+    <div id="voteButtons"></div>
+  </div>
+  <div id="resultDiv" style="display:none;"></div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
