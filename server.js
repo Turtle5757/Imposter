@@ -15,10 +15,10 @@ const categoryWords = {
     Objects: ['Chair','Table','Phone','Book','Car']
 };
 
-// Socket events
 io.on('connection', socket => {
     console.log('User connected', socket.id);
 
+    // Create Game
     socket.on('createGame', (playerName, category, callback) => {
         const gameId = Math.random().toString(36).substr(2,6).toUpperCase();
         const secretWord = categoryWords[category][Math.floor(Math.random()*categoryWords[category].length)];
@@ -28,16 +28,16 @@ io.on('connection', socket => {
             secretWord,
             players: [{id: socket.id, name: playerName, isImposter:false}],
             stage: 'waiting',
+            currentTurnIndex: 0,
             votes: {},
             chat: [],
-            currentTurnIndex: 0,
-            round: 1
         };
         socket.join(gameId);
         callback(gameId);
         io.to(gameId).emit('updatePlayers', games[gameId].players);
     });
 
+    // Join Game
     socket.on('joinGame', (gameId, playerName, callback) => {
         const game = games[gameId];
         if(game && game.players.length < 10){
@@ -48,16 +48,14 @@ io.on('connection', socket => {
         } else callback({success:false, message:'Game full or not found'});
     });
 
+    // Get active rooms
     socket.on('getActiveGames', callback => {
-        const rooms = Object.keys(games).map(gameId => ({
-            id: gameId,
-            playerCount: games[gameId].players.length
-        }));
+        const rooms = Object.keys(games).map(id => ({id, playerCount: games[id].players.length}));
         callback(rooms);
     });
 
-    // Start game
-    socket.on('startGame', (gameId) => {
+    // Start Game
+    socket.on('startGame', gameId => {
         const game = games[gameId];
         if(!game || socket.id !== game.host) return;
 
@@ -65,10 +63,9 @@ io.on('connection', socket => {
         game.players[imposterIndex].isImposter = true;
         game.stage = 'clues';
         game.currentTurnIndex = 0;
-        game.round = 1;
 
-        // Send secret word/imposter to each player **once**
-        game.players.forEach(p => {
+        // Send secret word / imposter once
+        game.players.forEach(p=>{
             if(p.isImposter){
                 io.to(p.id).emit('secretWord', `You are the Imposter! Category: ${game.category}`);
             } else {
@@ -80,16 +77,13 @@ io.on('connection', socket => {
         io.to(gameId).emit('nextTurn', game.players[0].name);
     });
 
-    // Submit clue
+    // Submit Clue
     socket.on('submitClue', (gameId, clue) => {
         const game = games[gameId];
         if(!game || game.stage !== 'clues') return;
 
-        const player = game.players.find(p => p.id === socket.id);
-        if(!player) return;
-
-        // Turn enforcement
-        if(game.players[game.currentTurnIndex].id !== socket.id) return;
+        const player = game.players[game.currentTurnIndex];
+        if(player.id !== socket.id) return;
 
         game.chat.push({player: player.name, message: clue});
         io.to(gameId).emit('chatUpdate', {player: player.name, message: clue});
@@ -103,16 +97,15 @@ io.on('connection', socket => {
         }
     });
 
-    // Start next clue round
+    // Start Next Clue Round
     socket.on('startNextRound', gameId => {
         const game = games[gameId];
         if(!game) return;
         game.currentTurnIndex = 0;
-        game.round++;
         io.to(gameId).emit('nextTurn', game.players[0].name);
     });
 
-    // Start voting
+    // Start Voting
     socket.on('startVoting', gameId => {
         const game = games[gameId];
         if(!game) return;
@@ -131,7 +124,7 @@ io.on('connection', socket => {
             Object.values(game.votes).forEach(v => voteCounts[v] = (voteCounts[v]||0)+1);
             const maxVotes = Math.max(...Object.values(voteCounts));
             const votedPlayer = Object.keys(voteCounts).find(k => voteCounts[k] === maxVotes);
-            const imposter = game.players.find(p => p.isImposter);
+            const imposter = game.players.find(p=>p.isImposter);
 
             io.to(gameId).emit('gameResult', {
                 imposter: imposter.name,
@@ -142,10 +135,11 @@ io.on('connection', socket => {
         }
     });
 
-    socket.on('disconnect', () => {
+    // Disconnect
+    socket.on('disconnect', ()=>{
         for(const gameId in games){
             let game = games[gameId];
-            game.players = game.players.filter(p => p.id !== socket.id);
+            game.players = game.players.filter(p=>p.id !== socket.id);
             io.to(gameId).emit('updatePlayers', game.players);
             if(game.players.length === 0) delete games[gameId];
         }
