@@ -1,6 +1,7 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -9,120 +10,144 @@ app.use(express.static("public"));
 
 let games = {};
 
-function createGame(hostId, hostName) {
-    const code = Math.random().toString(36).substring(2, 7).toUpperCase();
-    games[code] = {
-        hostId,
-        players: [{ id: hostId, name: hostName }],
-        stage: "lobby",
-        chat: [],
-        votingChat: [],
-        roles: {},
-        currentTurnIndex: 0
-    };
-    return code;
+function generateGame() {
+    return Math.random().toString(36).substring(2, 7).toUpperCase();
 }
 
 io.on("connection", (socket) => {
 
-    // Create game room
-    socket.on("createGame", (name, callback) => {
-        const code = createGame(socket.id, name);
+    // Create a game
+    socket.on("createGame", ({ name }, cb) => {
+        const code = generateGame();
+        games[code] = {
+            host: socket.id,
+            players: [{ id: socket.id, name }],
+            stage: "lobby",
+            word: "APPLE",
+            category: "Fruits",
+            roles: {},
+            turn: 0,
+            round: 1,
+            clues: [],
+            chat: [],
+            votingChat: []
+        };
+
         socket.join(code);
-        callback(code);
+        cb({ ok: true, code });
         io.to(code).emit("playerList", games[code].players);
     });
 
-    // Join existing game room
-    socket.on("joinGame", (code, name, callback) => {
+    // Join a game
+    socket.on("joinGame", ({ name, code }, cb) => {
         const game = games[code];
-        if (!game) return callback(false);
+        if (!game) return cb({ ok: false });
 
         game.players.push({ id: socket.id, name });
         socket.join(code);
-        callback(true);
 
+        cb({ ok: true });
         io.to(code).emit("playerList", game.players);
     });
 
     // Start game
-    socket.on("startGame", (code) => {
+    socket.on("startGame", ({ code }) => {
         const game = games[code];
-        if (!game) return;
+        if (!game || socket.id !== game.host) return;
 
-        // assign roles
-        const imp = game.players[Math.floor(Math.random() * game.players.length)];
+        // Pick imposter
+        const imp = game.players[Math.floor(Math.random() * game.players.length)].id;
+        game.roles = {};
         game.players.forEach(p => {
-            game.roles[p.id] = p.id === imp.id ? "imposter" : "word-holder";
+            game.roles[p.id] = p.id === imp ? "imposter" : "normal";
         });
 
         game.stage = "clues";
-        game.currentTurnIndex = 0;
-        io.to(code).emit("gameStarted");
+        game.turn = 0;
+        game.clues = [];
 
-        io.to(code).emit("yourRole", game.roles[socket.id]);
-        io.to(code).emit("nextTurn", game.players[0].name);
+        // Send roles
+        game.players.forEach(p => {
+            io.to(p.id).emit("roleInfo", {
+                role: game.roles[p.id],
+                secretWord: game.roles[p.id] === "normal" ? game.word : null,
+                category: game.category
+            });
+        });
+
+        io.to(code).emit("gameStarted", {
+            firstTurn: game.players[0].name
+        });
     });
 
-    // Submit clue (turn-based)
-    socket.on("submitClue", (code, clue) => {
+    // Submit a clue
+    socket.on("submitClue", ({ code, clue }) => {
         const game = games[code];
-        if (!game) return;
+        if (!game || game.stage !== "clues") return;
 
-        const turnPlayer = game.players[game.currentTurnIndex];
-        if (turnPlayer.id !== socket.id) return; 
+        const player = game.players[game.turn];
+        if (socket.id !== player.id) return; // not your turn
 
-        game.chat.push({ player: turnPlayer.name, message: clue });
-        io.to(code).emit("chatUpdate", clue, turnPlayer.name);
+        game.clues.push({ name: player.name, clue });
 
-        game.currentTurnIndex++;
+        // Broadcast clue
+        io.to(code).emit("clueAdded", { name: player.name, clue });
 
-        if (game.currentTurnIndex >= game.players.length) {
-            io.to(code).emit("clueRoundOver");
+        // Next turn
+        game.turn++;
+
+        if (game.turn === game.players.length) {
+            // Round done
+            io.to(code).emit("roundOptions", socket.id === game.host);
         } else {
-            io.to(code).emit(
-                "nextTurn",
-                game.players[game.currentTurnIndex].name
-            );
+            io.to(code).emit("nextTurn", {
+                name: game.players[game.turn].name
+            });
         }
     });
 
-    // Host chooses "Next Round"
-    socket.on("nextRound", (code) => {
-        const game = games[code];
-        game.currentTurnIndex = 0;
-        io.to(code).emit("nextTurn", game.players[0].name);
-    });
-
-    // Host chooses "Start Voting"
-    socket.on("startVoting", (code) => {
-        const game = games[code];
-        game.stage = "voting";
-        io.to(code).emit(
-            "startVoting",
-            game.players.map((p) => ({ id: p.id, name: p.name }))
-        );
-    });
-
-    // Voting chat
-    socket.on("sendVotingMessage", (code, msg) => {
+    // Host starts another round
+    socket.on("nextRound", ({ code }) => {
         const game = games[code];
         if (!game) return;
 
-        const player = game.players.find(p => p.id === socket.id);
-        game.votingChat.push({ player: player.name, message: msg });
+        game.turn = 0;
+        game.round++;
+        game.clues = [];
 
-        io.to(code).emit("votingChatUpdate", player.name, msg);
+        io.to(code).emit("nextTurn", {
+            name: game.players[0].name
+        });
     });
 
+    // Host starts voting
+    socket.on("startVoting", ({ code }) => {
+        const game = games[code];
+        if (!game) return;
+
+        game.stage = "voting";
+
+        io.to(code).emit("votingStarted", {
+            players: game.players
+        });
+    });
+
+    // Chat during voting
+    socket.on("votingMessage", ({ code, name, msg }) => {
+        const game = games[code];
+        if (!game) return;
+
+        io.to(code).emit("votingChatUpdate", { name, msg });
+    });
+
+    // Disconnect cleanup
     socket.on("disconnect", () => {
-        for (const code in games) {
+        for (let code in games) {
             const game = games[code];
             game.players = game.players.filter(p => p.id !== socket.id);
-
             io.to(code).emit("playerList", game.players);
         }
     });
 });
 
-server.listen(3000, () => console.log("Server running on port 3000"));
+server.listen(3000, () => console.log("Server running on 3000"));
