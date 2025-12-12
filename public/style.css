@@ -1,7 +1,16 @@
-body { font-family: Arial; text-align:center; background:#f2f2f2; padding:20px; }
-button { padding:8px 16px; margin:5px; cursor:pointer; }
-#chatBox { border:1px solid #333; height:200px; overflow-y:scroll; margin:10px; padding:5px; background:#fff; }
-#chatInput { width:200px; }
-ul { list-style:none; padding:0; }
-li { cursor:pointer; padding:5px; border:1px solid #333; margin:3px; display:inline-block; }
-li:hover { background:#ddd; }
+body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:0;background:#f5f7fb;color:#111}
+.panel{max-width:840px;margin:24px auto;padding:18px;background:white;border-radius:12px;box-shadow:0 6px 18px rgba(10,10,10,0.06)}
+#playersList{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.player{padding:8px 10px;border-radius:8px;background:#eef2ff;border:1px solid #dde6ff}
+.player.ready{background:#dff7e0;border-color:#bfecc3}
+#chatWrap{display:flex;flex-direction:column}
+#chatLog{height:220px;overflow:auto;border:1px solid #eee;padding:8px;border-radius:8px;margin-bottom:8px;background:#fafafa}
+#chatLog .msg{margin-bottom:6px}
+#chatLog .msg.system{color:#666;font-style:italic}
+#chatForm{display:flex;gap:8px}
+#chatForm input{flex:1;padding:8px;border-radius:8px;border:1px solid #ddd}
+button{padding:8px 12px;border-radius:8px;border:0;background:#2b6ef6;color:white;cursor:pointer}
+button:disabled{opacity:.5}
+#roleInfo{margin:12px 0;padding:12px;background:#fff7e6;border-radius:8px;border:1px solid #fde6b8}
+#timer{font-weight:600;margin-bottom:8px}
+.voteBtn{margin:4px}
