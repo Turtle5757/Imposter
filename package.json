@@ -1,7 +1,7 @@
 {
   "name": "imposter-online",
   "version": "1.0.0",
-  "description": "Online Imposter-style party game",
+  "description": "Fully working Imposter-style game",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
