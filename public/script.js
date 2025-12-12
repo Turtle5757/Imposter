@@ -132,4 +132,40 @@ socket.on('roundComplete', gameId=>{
   };
   hostButtonsDiv.appendChild(nextBtn);
 
-  const voteBtn = document.createE
+  const voteBtn = document.createElement('button');
+  voteBtn.textContent = 'Start Voting';
+  voteBtn.onclick = ()=>{
+    socket.emit('startVoting', gameId);
+    hostButtonsDiv.innerHTML='';
+  };
+  hostButtonsDiv.appendChild(voteBtn);
+});
+
+// Start Voting
+socket.on('startVoting', players=>{
+  votingDiv.style.display='block';
+  voteButtonsDiv.innerHTML='';
+  players.forEach(name=>{
+    const btn = document.createElement('button');
+    btn.textContent = name;
+    btn.onclick = ()=>{
+      socket.emit('vote', currentGameId, name);
+      votingDiv.style.display='none';
+      wordDisplay.textContent='Waiting for results...';
+    };
+    voteButtonsDiv.appendChild(btn);
+  });
+});
+
+// Game Result
+socket.on('gameResult', data=>{
+  votingDiv.style.display='none';
+  resultDiv.style.display='block';
+  wordDisplay.textContent='';
+  let html = `<h2>Imposter: ${data.imposter}</h2>`;
+  html += `<h3>Voted Player: ${data.votedPlayer}</h3>`;
+  html += `<p>Secret Word: ${data.word}</p>`;
+  html += `<p>Clues:</p>`;
+  data.clues.forEach(c=> html+= `<p>${c.player}: ${c.message}</p>`);
+  resultDiv.innerHTML = html;
+});
