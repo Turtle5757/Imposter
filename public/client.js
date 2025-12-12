@@ -9,7 +9,10 @@ function show(id) {
   document.getElementById(id).classList.remove("hidden");
 }
 
-document.getElementById("create").onclick = () => socket.emit("createRoom");
+document.getElementById("create").onclick = () => {
+  NAME = document.getElementById("playerName").value;
+  socket.emit("createRoom", NAME);
+};
 
 document.getElementById("join").onclick = () => {
   NAME = document.getElementById("playerName").value;
@@ -30,7 +33,7 @@ socket.on("roomUpdate", room => {
   list.innerHTML = "";
   for (const [pid, p] of Object.entries(room.players)) {
     const div = document.createElement("div");
-    div.innerText = p.name + (p.ready ? " ✔️" : "");
+    div.innerText = p.name;
     list.appendChild(div);
   }
   if (socket.id === room.host) {
@@ -39,8 +42,6 @@ socket.on("roomUpdate", room => {
   }
 });
 
-document.getElementById("readyBtn").onclick = () => socket.emit("setReady", { roomId: ROOM });
-
 document.getElementById("startGameBtn").onclick = () => socket.emit("startGame", { roomId: ROOM });
 
 socket.on("role", ({ role, category, word }) => {
@@ -48,7 +49,7 @@ socket.on("role", ({ role, category, word }) => {
   document.getElementById("roleName").innerText = role.toUpperCase();
   document.getElementById("wordInfo").innerText =
     role === "imposter"
-      ? "Category: " + category + " (NO WORD!)"
+      ? "Category: " + category + " (No Word)"
       : "Category: " + category + " — Word: " + word;
 });
 
