@@ -7,16 +7,15 @@
 <body>
 
 <div id="lobby">
+  <input id="playerName" placeholder="Your Name">
   <button id="create">Create Room</button>
   <input id="joinId" placeholder="Room ID">
-  <input id="playerName" placeholder="Your Name">
   <button id="join">Join Room</button>
 </div>
 
 <div id="room" class="hidden">
   <h2>Room: <span id="roomCode"></span></h2>
   <div id="players"></div>
-  <button id="readyBtn">Ready</button>
   <button id="startGameBtn" class="hostOnly hidden">Start Game</button>
 </div>
 
