@@ -28,9 +28,10 @@ io.on('connection', socket => {
       players: [{id: socket.id, name: playerName, isImposter:false}],
       stage: 'waiting',
       currentTurnIndex: 0,
-      cluesGiven: {},
+      cluesGivenThisRound: [],
       votes: {},
-      chat: []
+      chat: [],
+      secretSent: false
     };
     socket.join(gameId);
     callback(gameId);
@@ -52,7 +53,6 @@ io.on('connection', socket => {
     callback(rooms);
   });
 
-  // Start Game
   socket.on('startGame', gameId => {
     const game = games[gameId];
     if(!game || socket.id !== game.host) return;
@@ -61,23 +61,23 @@ io.on('connection', socket => {
     game.players[imposterIndex].isImposter = true;
     game.stage = 'clues';
     game.currentTurnIndex = 0;
-    game.cluesGiven = {};
+    game.cluesGivenThisRound = [];
 
-    // Send secret word / imposter once
-    game.players.forEach(p=>{
-      if(p.isImposter){
-        io.to(p.id).emit('secretWord', `You are the Imposter! Category: ${game.category}`);
-      } else {
-        io.to(p.id).emit('secretWord', game.secretWord);
-      }
-    });
+    if(!game.secretSent){
+      game.players.forEach(p=>{
+        if(p.isImposter){
+          io.to(p.id).emit('secretWord', `You are the Imposter! Category: ${game.category}`);
+        } else {
+          io.to(p.id).emit('secretWord', game.secretWord);
+        }
+      });
+      game.secretSent = true;
+    }
 
     io.to(gameId).emit('gameStarted');
-    // Start first turn
     io.to(gameId).emit('nextTurn', game.players[0].name);
   });
 
-  // Submit clue
   socket.on('submitClue', (gameId, clue) => {
     const game = games[gameId];
     if(!game || game.stage !== 'clues') return;
@@ -85,30 +85,26 @@ io.on('connection', socket => {
     const player = game.players[game.currentTurnIndex];
     if(player.id !== socket.id) return;
 
-    game.cluesGiven[player.id] = true;
+    game.cluesGivenThisRound.push(player.id);
     game.chat.push({player: player.name, message: clue});
     io.to(gameId).emit('chatUpdate', {player: player.name, message: clue});
 
-    // Advance turn
     game.currentTurnIndex++;
     if(game.currentTurnIndex >= game.players.length){
-      // Round complete
       io.to(game.host).emit('roundComplete', gameId);
     } else {
       io.to(gameId).emit('nextTurn', game.players[game.currentTurnIndex].name);
     }
   });
 
-  // Start next clue round
   socket.on('startNextRound', gameId => {
     const game = games[gameId];
     if(!game) return;
     game.currentTurnIndex = 0;
-    game.cluesGiven = {};
+    game.cluesGivenThisRound = [];
     io.to(gameId).emit('nextTurn', game.players[0].name);
   });
 
-  // Start voting
   socket.on('startVoting', gameId => {
     const game = games[gameId];
     if(!game) return;
@@ -116,7 +112,6 @@ io.on('connection', socket => {
     io.to(gameId).emit('startVoting', game.players.map(p=>p.name));
   });
 
-  // Voting
   socket.on('vote', (gameId, votedName) => {
     const game = games[gameId];
     if(game.stage !== 'voting') return;
@@ -138,7 +133,6 @@ io.on('connection', socket => {
     }
   });
 
-  // Disconnect
   socket.on('disconnect', ()=>{
     for(const gameId in games){
       let game = games[gameId];
