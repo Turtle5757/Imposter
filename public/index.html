@@ -1,43 +1,44 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Imposter Game</title>
+    <title>Imposter Online</title>
+    <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
-    <div id="lobby">
-        <input id="name" placeholder="Your name" />
-        <button id="createBtn">Create Game</button>
+<div id="lobby">
+    <input id="name" placeholder="Your name"/>
+    <button id="createBtn">Create Game</button>
+    <input id="joinCode" placeholder="Room code"/>
+    <button id="joinBtn">Join Game</button>
+</div>
 
-        <input id="joinCode" placeholder="Code" />
-        <button id="joinBtn">Join Game</button>
+<div id="game" style="display:none">
+    <h1 id="roomCode"></h1>
+    <h2 id="role">Role:</h2>
+    <h2 id="turn">Turn:</h2>
+    <div id="players"></div>
+    <button id="startGameBtn">Start Game</button>
+
+    <div id="chat"></div>
+    <input id="clueInput" placeholder="Your clue"/>
+    <button id="sendClue">Send Clue</button>
+    <div id="roundControls"></div>
+
+    <div id="voting" style="display:none">
+        <h2>Voting Phase</h2>
+        <div id="votingChat"></div>
+        <input id="voteInput" placeholder="Discuss..."/>
+        <button id="sendVoteMsg">Send</button>
+
+        <h3>Vote someone out:</h3>
+        <input id="voteTarget" placeholder="Player Name"/>
+        <button id="voteBtn">Vote</button>
     </div>
 
-    <div id="game" style="display:none;">
-        <h1 id="roomCode"></h1>
+    <div id="result"></div>
+</div>
 
-        <h2 id="role"></h2>
-        <h2 id="turn"></h2>
-
-        <div id="players"></div>
-
-        <button id="startGameBtn">Start Game</button>
-
-        <div id="chat"></div>
-        <input id="clueInput" placeholder="Your clue..." />
-        <button id="sendClue">Send clue</button>
-
-        <div id="roundControls"></div>
-
-        <div id="voting" style="display:none;">
-            <h2>Voting Phase</h2>
-            <div id="votingChat"></div>
-
-            <input id="voteInput" placeholder="Discuss..." />
-            <button id="sendVoteMsg">Send</button>
-        </div>
-    </div>
-
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
