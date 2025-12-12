@@ -1,48 +1,55 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <title>Imposter (Word) — Play Online</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="stylesheet" href="style.css" />
+  <title>Imposter Online</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="app">
-    <div id="lobby" class="panel">
-      <h1>Imposter (Word)</h1>
-      <div id="joinCreate">
-        <input id="name" placeholder="Your name" />
-        <button id="createBtn">Create Room</button>
-        <input id="roomInput" placeholder="Room code (or blank to create)" />
-        <button id="joinBtn">Join Room</button>
-      </div>
 
-      <div id="roomArea" style="display:none;">
-        <h2>Room <span id="roomCode"></span></h2>
-        <div id="playersList"></div>
-        <button id="readyBtn">Ready</button>
-        <button id="startBtn">Start Game</button>
-      </div>
-      <div id="notifications"></div>
-    </div>
+<div id="lobby">
+  <button id="create">Create Room</button>
+  <input id="joinId" placeholder="Room ID">
+  <input id="playerName" placeholder="Your Name">
+  <button id="join">Join Room</button>
+</div>
 
-    <div id="game" class="panel" style="display:none;">
-      <h2 id="gameStatus"></h2>
-      <div id="roleInfo"></div>
-      <div id="timer"></div>
-      <div id="chatWrap">
-        <div id="chatLog"></div>
-        <form id="chatForm"><input id="chatIn" autocomplete="off" /><button>Send</button></form>
-      </div>
-      <div id="voting" style="display:none;">
-        <h3>Vote to eject</h3>
-        <div id="voteList"></div>
-        <button id="revealBtn">Reveal (Host)</button>
-      </div>
-    </div>
-  </div>
+<div id="room" class="hidden">
+  <h2>Room: <span id="roomCode"></span></h2>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="client.js"></script>
+  <div id="players"></div>
+
+  <button id="readyBtn">Ready</button>
+  <button id="startGameBtn" class="hostOnly hidden">Start Game</button>
+</div>
+
+<div id="roleScreen" class="hidden">
+  <h2>You are: <span id="roleName"></span></h2>
+  <p id="wordInfo"></p>
+</div>
+
+<div id="clueScreen" class="hidden">
+  <h2>Clue Round</h2>
+  <p>Current turn: <span id="turnPlayer"></span></p>
+  <textarea id="clueText"></textarea><br>
+  <button id="sendClueBtn">Send Clue</button>
+
+  <h3>Clues</h3>
+  <div id="clueList"></div>
+
+  <button id="startVotingBtn" class="hostOnly hidden">Start Voting</button>
+</div>
+
+<div id="votingScreen" class="hidden">
+  <h2>Voting</h2>
+  <div id="voteList"></div>
+</div>
+
+<div id="resultScreen" class="hidden">
+  <h2>Results</h2>
+  <p id="resultText"></p>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="client.js"></script>
 </body>
 </html>
