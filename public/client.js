@@ -55,7 +55,7 @@ socket.on("role", data=>{
 socket.on("revealPhase", ()=>{
   const msg = document.getElementById("revealPhaseMsg");
   msg.innerText = "Memorize your word / category...";
-  setTimeout(()=>{ msg.innerText=""; currentPhase="clues"; }, 5000);
+  setTimeout(()=>{ msg.innerText=""; currentPhase="clues"; enableClueTurn(); }, 5000);
 });
 
 socket.on("cluePhase", ()=>{
@@ -71,7 +71,7 @@ socket.on("turn", id=>{
     document.getElementById("clueInput").disabled=false;
     document.getElementById("sendClueBtn").disabled=false;
   }else{
-    turnLabel.innerText = "Waiting for "+id;
+    turnLabel.innerText = "Waiting for other player's turn";
     document.getElementById("clueInput").disabled=true;
     document.getElementById("sendClueBtn").disabled=true;
   }
@@ -91,7 +91,6 @@ socket.on("newClue", data=>{
 });
 
 function nextTurn(){ socket.emit("nextTurn", ROOM); }
-
 function startVoting(){ 
   currentPhase="voting";
   socket.emit("startVoting", ROOM); 
