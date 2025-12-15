@@ -1,7 +1,7 @@
 {
   "name": "imposter-online",
   "version": "1.0.0",
-  "description": "Online turn-based Imposter game",
+  "description": "Online Imposter Clone",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
