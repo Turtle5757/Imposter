@@ -19,9 +19,13 @@ const rooms = {};
 
 io.on("connection", (socket) => {
 
+  socket.emit("roomList", Object.keys(rooms).map(r => ({
+    name: r,
+    players: Object.keys(rooms[r].players).length
+  })));
+
   socket.on("createRoom", ({ name, room }) => {
     if (rooms[room]) return;
-
     rooms[room] = {
       host: socket.id,
       players: {},
@@ -30,24 +34,23 @@ io.on("connection", (socket) => {
       currentTurn: 0,
       votes: {}
     };
-
     rooms[room].players[socket.id] = { name };
     socket.join(room);
     io.to(room).emit("roomUpdate", rooms[room]);
+    io.emit("roomList", getRoomList());
   });
 
   socket.on("joinRoom", ({ name, room }) => {
     if (!rooms[room]) return;
-
     rooms[room].players[socket.id] = { name };
     socket.join(room);
     io.to(room).emit("roomUpdate", rooms[room]);
+    io.emit("roomList", getRoomList());
   });
 
   socket.on("startGame", (room) => {
     const r = rooms[room];
     if (!r) return;
-
     const ids = Object.keys(r.players);
     if (ids.length < 3) return;
 
@@ -72,10 +75,19 @@ io.on("connection", (socket) => {
     io.to(room).emit("turn", r.turnOrder[r.currentTurn]);
   });
 
+  socket.on("sendClue", ({ room, clue }) => {
+    const r = rooms[room];
+    if (!r || r.state !== "clues") return;
+    if (socket.id !== r.turnOrder[r.currentTurn]) return;
+    io.to(room).emit("newClue", {
+      player: r.players[socket.id].name,
+      clue
+    });
+  });
+
   socket.on("nextTurn", (room) => {
     const r = rooms[room];
     if (!r || r.state !== "clues") return;
-
     r.currentTurn++;
     if (r.currentTurn < r.turnOrder.length) {
       io.to(room).emit("turn", r.turnOrder[r.currentTurn]);
@@ -85,7 +97,6 @@ io.on("connection", (socket) => {
   socket.on("startVoting", (room) => {
     const r = rooms[room];
     if (!r) return;
-
     r.state = "voting";
     r.votes = {};
     io.to(room).emit("votingStart", Object.keys(r.players));
@@ -94,7 +105,6 @@ io.on("connection", (socket) => {
   socket.on("vote", ({ room, target }) => {
     const r = rooms[room];
     if (!r || r.state !== "voting") return;
-
     r.votes[target] = (r.votes[target] || 0) + 1;
   });
 
@@ -104,7 +114,6 @@ io.on("connection", (socket) => {
 
     let maxVotes = 0;
     let votedOut = null;
-
     for (const id in r.votes) {
       if (r.votes[id] > maxVotes) {
         maxVotes = r.votes[id];
@@ -113,13 +122,11 @@ io.on("connection", (socket) => {
     }
 
     const crewWin = votedOut === r.imposter;
-
     io.to(room).emit("gameOver", {
       imposter: r.players[r.imposter]?.name || "Unknown",
       word: r.word,
       winner: crewWin ? "Crewmates" : "Imposter"
     });
-
     r.state = "lobby";
   });
 
@@ -133,9 +140,17 @@ io.on("connection", (socket) => {
       if (rooms[room].players[socket.id]) {
         delete rooms[room].players[socket.id];
         io.to(room).emit("roomUpdate", rooms[room]);
+        io.emit("roomList", getRoomList());
       }
     }
   });
+
+  function getRoomList() {
+    return Object.keys(rooms).map(r => ({
+      name: r,
+      players: Object.keys(rooms[r].players).length
+    }));
+  }
 
 });
 
