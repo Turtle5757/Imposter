@@ -1,4 +1,6 @@
-body { font-family: sans-serif; background: #111; color: white; text-align: center; }
-#chat { height: 200px; overflow-y: auto; border: 1px solid #444; margin: 10px; }
-button { padding: 10px; margin: 5px; }
-input { padding: 8px; }
+body { font-family: sans-serif; background:#111; color:white; text-align:center; }
+button { padding:8px; margin:5px; }
+input { padding:6px; margin:3px; }
+#chat, #clues { height:200px; overflow-y:auto; border:1px solid #444; margin:10px; padding:5px; text-align:left;}
+#roomList li { cursor:pointer; margin:5px 0; }
+#roomList li:hover { color:yellow; }
