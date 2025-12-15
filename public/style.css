@@ -1,6 +1,44 @@
-body { font-family:sans-serif; background:#111; color:white; text-align:center; }
-button { padding:6px; margin:3px; }
-input { padding:5px; margin:3px; }
-#clues, #chat { height:200px; overflow-y:auto; border:1px solid #444; margin:10px; padding:5px; text-align:left; }
-#roomList li { cursor:pointer; margin:5px 0; }
-#roomList li:hover { color:yellow; }
+body {
+  font-family: sans-serif;
+  background:#111;
+  color:white;
+  text-align:center;
+}
+
+button {
+  padding:6px;
+  margin:3px;
+}
+
+input {
+  padding:5px;
+  margin:3px;
+}
+
+#clues, #chat {
+  height:200px;
+  overflow-y:auto;
+  border:1px solid #444;
+  margin:10px;
+  padding:5px;
+  text-align:left;
+}
+
+#roomList li {
+  cursor:pointer;
+  margin:5px 0;
+}
+
+#roomList li:hover {
+  color:yellow;
+}
+
+#revealPhaseMsg {
+  margin:10px;
+  font-size:1.2em;
+  color:lightgreen;
+}
+
+#endScreen {
+  margin-top:20px;
+}
