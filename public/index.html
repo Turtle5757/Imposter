@@ -1,26 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="utf-8">
 <title>Imposter Online</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="menu">
-<input id="name" placeholder="Name">
-<input id="room" placeholder="Room Code">
-<button onclick="createRoom()">Create</button>
-<button onclick="joinRoom()">Join</button>
+<div id="lobby">
+  <h2>Rooms</h2>
+  <ul id="roomList"></ul>
+  <input id="name" placeholder="Name">
+  <input id="room" placeholder="Room Name">
+  <button onclick="createRoom()">Create Room</button>
+  <button onclick="joinRoom()">Join Room</button>
 </div>
-
 
 <div id="game" hidden>
-<h2 id="role"></h2>
-<h3 id="turn"></h3>
-<button id="startVote" onclick="startVoting()">Start Voting</button>
-<div id="chat"></div>
-<input id="msg"><button onclick="sendChat()">Send</button>
+  <h2 id="role"></h2>
+  <h3 id="turn"></h3>
+  <div id="clues"></div>
+  <input id="clueInput"><button onclick="sendClue()">Send Clue</button>
+  <button id="nextTurnBtn" onclick="nextTurn()">Next Turn</button>
+  <button onclick="startVoting()">Start Voting</button>
+  <div id="chat"></div>
+  <input id="msg"><button onclick="sendChat()">Send Chat</button>
 </div>
-
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="client.js"></script>
