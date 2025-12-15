@@ -18,7 +18,7 @@ const WORDS = [
 const rooms = {};
 
 io.on("connection", (socket) => {
-  // Send available rooms on connection
+  // send room list
   socket.emit("roomList", getRoomList());
 
   socket.on("createRoom", ({ name, room }) => {
@@ -60,8 +60,9 @@ io.on("connection", (socket) => {
     r.turnOrder = [...ids];
     r.currentTurn = 0;
     r.state = "reveal";
+    r.votes = {};
 
-    // Send roles to players
+    // send roles
     ids.forEach((id) => {
       io.to(id).emit("role", {
         imposter: id === imposter,
@@ -72,7 +73,6 @@ io.on("connection", (socket) => {
 
     io.to(room).emit("revealPhase");
 
-    // After 5 seconds, start clue phase
     setTimeout(() => {
       r.state = "clues";
       io.to(room).emit("cluePhase");
@@ -116,7 +116,6 @@ io.on("connection", (socket) => {
   socket.on("endVoting", (room) => {
     const r = rooms[room];
     if (!r) return;
-
     let maxVotes = 0;
     let votedOut = null;
     for (const id in r.votes) {
