@@ -7,9 +7,9 @@
 </head>
 <body>
 <div id="lobby">
-  <h2>Rooms</h2>
+  <h2>Public Rooms</h2>
   <ul id="roomList"></ul>
-  <input id="name" placeholder="Name">
+  <input id="name" placeholder="Your Name">
   <input id="room" placeholder="Room Name">
   <button onclick="createRoom()">Create Room</button>
   <button onclick="joinRoom()">Join Room</button>
@@ -19,13 +19,14 @@
   <h2 id="role"></h2>
   <h3 id="turn"></h3>
   <div id="clues"></div>
-  <input id="clueInput"><button onclick="sendClue()">Send Clue</button>
+  <input id="clueInput" placeholder="Type clue">
+  <button id="sendClueBtn" onclick="sendClue()">Send Clue</button>
   <button id="nextTurnBtn" onclick="nextTurn()">Next Turn</button>
-  <button onclick="startVoting()">Start Voting</button>
+  <h3>Chat</h3>
   <div id="chat"></div>
-  <input id="msg"><button onclick="sendChat()">Send Chat</button>
+  <input id="msg" placeholder="Message">
+  <button onclick="sendChat()">Send</button>
 </div>
-
 <script src="/socket.io/socket.io.js"></script>
 <script src="client.js"></script>
 </body>
