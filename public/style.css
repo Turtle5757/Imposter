@@ -5,15 +5,8 @@ body {
   text-align:center;
 }
 
-button {
-  padding:6px;
-  margin:3px;
-}
-
-input {
-  padding:5px;
-  margin:3px;
-}
+button { padding:6px; margin:3px; }
+input { padding:5px; margin:3px; }
 
 #clues, #chat {
   height:200px;
@@ -33,12 +26,6 @@ input {
   color:yellow;
 }
 
-#revealPhaseMsg {
-  margin:10px;
-  font-size:1.2em;
-  color:lightgreen;
-}
+#revealPhaseMsg { margin:10px; font-size:1.2em; color:lightgreen; }
 
-#endScreen {
-  margin-top:20px;
-}
+#endScreen { margin-top:20px; }
