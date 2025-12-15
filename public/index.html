@@ -1,48 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Imposter Online</title>
-  <link rel="stylesheet" href="style.css">
+<title>Imposter Online</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<div id="lobby">
-  <input id="playerName" placeholder="Your Name">
-  <button id="create">Create Room</button>
-  <input id="joinId" placeholder="Room ID">
-  <button id="join">Join Room</button>
+<div id="menu">
+<input id="name" placeholder="Name">
+<input id="room" placeholder="Room Code">
+<button onclick="createRoom()">Create</button>
+<button onclick="joinRoom()">Join</button>
 </div>
 
-<div id="room" class="hidden">
-  <h2>Room: <span id="roomCode"></span></h2>
-  <div id="players"></div>
-  <button id="startGameBtn" class="hostOnly hidden">Start Game</button>
+
+<div id="game" hidden>
+<h2 id="role"></h2>
+<h3 id="turn"></h3>
+<button id="startVote" onclick="startVoting()">Start Voting</button>
+<div id="chat"></div>
+<input id="msg"><button onclick="sendChat()">Send</button>
 </div>
 
-<div id="roleScreen" class="hidden">
-  <h2>You are: <span id="roleName"></span></h2>
-  <p id="wordInfo"></p>
-</div>
-
-<div id="clueScreen" class="hidden">
-  <h2>Clue Round</h2>
-  <p>Current turn: <span id="turnPlayer"></span></p>
-  <textarea id="clueText"></textarea><br>
-  <button id="sendClueBtn">Send Clue</button>
-  <h3>Clues</h3>
-  <div id="clueList"></div>
-  <button id="startVotingBtn" class="hostOnly hidden">Start Voting</button>
-</div>
-
-<div id="votingScreen" class="hidden">
-  <h2>Voting</h2>
-  <div id="voteList"></div>
-</div>
-
-<div id="resultScreen" class="hidden">
-  <h2>Results</h2>
-  <p id="resultText"></p>
-</div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="client.js"></script>
