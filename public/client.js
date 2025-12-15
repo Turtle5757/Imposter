@@ -33,9 +33,9 @@ function joinRoom(){
 }
 
 socket.on("role", data=>{
-  document.getElementById("role").innerText = data.imposter
-    ? "You are IMPOSTER\nCategory: "+data.category
-    : "Word: "+data.word;
+  document.getElementById("role").innerText = data.imposter ? 
+    "You are IMPOSTER\nCategory: "+data.category : 
+    "Word: "+data.word;
 });
 
 socket.on("turn", id=>{
@@ -58,7 +58,6 @@ socket.on("newClue", data=>{
 });
 
 function nextTurn(){ socket.emit("nextTurn", ROOM); }
-function startVoting(){ socket.emit("startVoting", ROOM); }
 function sendChat(){
   const m = document.getElementById("msg");
   if(!m.value) return;
@@ -70,6 +69,17 @@ socket.on("chat", data=>{
   const div = document.getElementById("chat");
   div.innerHTML += `<p><b>${data.name}:</b> ${data.msg}</p>`;
   div.scrollTop = div.scrollHeight;
+});
+
+socket.on("votingStart", players=>{
+  const div = document.getElementById("clues");
+  div.innerHTML += "<p>Voting started! Click a player to vote:</p>";
+  players.forEach(p=>{
+    const btn = document.createElement("button");
+    btn.textContent = p.name;
+    btn.onclick = ()=>{ socket.emit("vote",{room:ROOM,target:p.id}); };
+    div.appendChild(btn);
+  });
 });
 
 socket.on("gameOver", data=>{
