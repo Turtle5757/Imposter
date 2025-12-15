@@ -8,6 +8,7 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
+// Example words
 const WORDS = [
   { category: "Animal", word: "Elephant" },
   { category: "Food", word: "Pizza" },
@@ -17,7 +18,7 @@ const WORDS = [
 
 const rooms = {};
 
-io.on("connection", (socket) => {
+io.on("connection", socket => {
   socket.emit("roomList", getRoomList());
 
   socket.on("createRoom", ({ name, room }) => {
@@ -45,7 +46,7 @@ io.on("connection", (socket) => {
     io.emit("roomList", getRoomList());
   });
 
-  socket.on("startGame", (room) => {
+  socket.on("startGame", room => {
     const r = rooms[room];
     if (!r) return;
     const ids = Object.keys(r.players);
@@ -62,8 +63,10 @@ io.on("connection", (socket) => {
     r.state = "reveal";
     r.votes = {};
     r.clues = [];
+    r.votedPlayers = new Set();
 
-    ids.forEach((id) => {
+    // Send role info individually
+    ids.forEach(id => {
       io.to(id).emit("role", {
         imposter: id === imposter,
         word: id === imposter ? null : r.word,
@@ -84,9 +87,10 @@ io.on("connection", (socket) => {
     const r = rooms[room];
     if (!r || r.state !== "clues") return;
     if (socket.id !== r.turnOrder[r.currentTurn]) return;
+
     r.clues.push({ player: r.players[socket.id].name, clue });
     io.to(room).emit("newClue", { player: r.players[socket.id].name, clue });
-    // automatically advance turn
+
     r.currentTurn++;
     if (r.currentTurn < r.turnOrder.length) {
       io.to(room).emit("turn", r.turnOrder[r.currentTurn]);
@@ -95,7 +99,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("startVoting", (room) => {
+  socket.on("startVoting", room => {
     const r = rooms[room];
     if (!r) return;
     r.state = "voting";
@@ -107,11 +111,11 @@ io.on("connection", (socket) => {
   socket.on("vote", ({ room, target }) => {
     const r = rooms[room];
     if (!r || r.state !== "voting") return;
-    if (r.votedPlayers.has(socket.id)) return; // prevent double voting
+    if (r.votedPlayers.has(socket.id)) return;
+
     r.votes[target] = (r.votes[target] || 0) + 1;
     r.votedPlayers.add(socket.id);
 
-    // auto end voting when everyone has voted
     if (r.votedPlayers.size === Object.keys(r.players).length) {
       let maxVotes = 0;
       let votedOut = null;
@@ -127,6 +131,7 @@ io.on("connection", (socket) => {
         word: r.word,
         winner: crewWin ? "Crewmates" : "Imposter"
       });
+
       r.state = "lobby";
       r.turnOrder = [];
       r.currentTurn = 0;
