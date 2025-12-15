@@ -1,4 +1,4 @@
-.hidden { display: none; }
-body { font-family: Arial; background: #f0f0f0; padding: 20px; }
-button { margin-top: 10px; padding: 10px; }
-#clueList div { background: white; margin: 5px; padding: 5px; border-radius: 5px; }
+body { font-family: sans-serif; background: #111; color: white; text-align: center; }
+#chat { height: 200px; overflow-y: auto; border: 1px solid #444; margin: 10px; }
+button { padding: 10px; margin: 5px; }
+input { padding: 8px; }
