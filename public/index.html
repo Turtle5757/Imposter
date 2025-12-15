@@ -17,16 +17,25 @@
 
 <div id="game" hidden>
   <h2 id="role"></h2>
+  <div id="revealPhaseMsg"></div>
   <h3 id="turn"></h3>
   <div id="clues"></div>
-  <input id="clueInput" placeholder="Type clue">
+  <input id="clueInput" placeholder="Type your clue">
   <button id="sendClueBtn" onclick="sendClue()">Send Clue</button>
   <button id="nextTurnBtn" onclick="nextTurn()">Next Turn</button>
+  <button id="startVoteBtn" onclick="startVoting()">Start Voting</button>
   <h3>Chat</h3>
   <div id="chat"></div>
   <input id="msg" placeholder="Message">
   <button onclick="sendChat()">Send</button>
 </div>
+
+<div id="endScreen" hidden>
+  <h2>Game Over</h2>
+  <p id="endInfo"></p>
+  <button onclick="playAgain()">Play Again</button>
+</div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script src="client.js"></script>
 </body>
