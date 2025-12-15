@@ -1,122 +1,90 @@
 const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
+r.imposter = imposter;
+r.word = wordObj.word;
+r.category = wordObj.category;
+r.turnOrder = [...ids];
+r.currentTurn = 0;
+r.state = "clues";
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
 
-app.use(express.static("public"));
-
-let rooms = {};
-
-function generateRoomCode() {
-  return Math.random().toString(36).substring(2, 7).toUpperCase();
-}
-
-const WORDS = [
-  { category: "Food", words: ["Pizza", "Burger", "Pasta"] },
-  { category: "Animal", words: ["Dog", "Cat", "Lion"] },
-  { category: "Vehicle", words: ["Car", "Bike", "Boat"] }
-];
-
-function getRandom(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-io.on("connection", (socket) => {
-
-  socket.on("createRoom", (name) => {
-    const roomId = generateRoomCode();
-    rooms[roomId] = {
-      host: socket.id,
-      players: {},
-      state: "lobby",
-      clues: [],
-      turnOrder: [],
-      turnIndex: 0,
-      votes: {}
-    };
-    rooms[roomId].players[socket.id] = { name: name || "Host" };
-    socket.join(roomId);
-    socket.emit("roomCreated", roomId);
-    io.to(roomId).emit("roomUpdate", rooms[roomId]);
-  });
-
-  socket.on("joinRoom", ({ roomId, name }) => {
-    const room = rooms[roomId];
-    if (!room) return socket.emit("errorMsg", "Room not found");
-    room.players[socket.id] = { name };
-    socket.join(roomId);
-    io.to(roomId).emit("roomUpdate", room);
-  });
-
-  socket.on("startGame", ({ roomId }) => {
-    const room = rooms[roomId];
-    if (!room) return;
-
-    const pids = Object.keys(room.players);
-    if (pids.length < 3) return;
-
-    const choice = getRandom(WORDS);
-    const imposter = getRandom(pids);
-    const realWord = getRandom(choice.words);
-
-    room.state = "clues";
-    room.word = realWord;
-    room.category = choice.category;
-    room.imposter = imposter;
-    room.turnOrder = pids;
-    room.turnIndex = 0;
-    room.clues = [];
-
-    pids.forEach(pid => {
-      if (pid === imposter) {
-        io.to(pid).emit("role", { role: "imposter", category: choice.category });
-      } else {
-        io.to(pid).emit("role", { role: "player", word: realWord, category: choice.category });
-      }
-    });
-
-    io.to(roomId).emit("newTurn", {
-      player: room.players[room.turnOrder[room.turnIndex]].name,
-      clues: room.clues
-    });
-  });
-
-  socket.on("sendClue", ({ roomId, clue }) => {
-    const room = rooms[roomId];
-    if (!room) return;
-    room.clues.push({ player: room.players[socket.id].name, text: clue });
-    room.turnIndex = (room.turnIndex + 1) % room.turnOrder.length;
-    io.to(roomId).emit("newTurn", {
-      player: room.players[room.turnOrder[room.turnIndex]].name,
-      clues: room.clues
-    });
-  });
-
-  socket.on("startVoting", ({ roomId }) => {
-    const room = rooms[roomId];
-    if (!room) return;
-    room.state = "voting";
-    room.votes = {};
-    io.to(roomId).emit("votingStarted", { players: room.players });
-  });
-
-  socket.on("submitVote", ({ roomId, voteFor }) => {
-    const room = rooms[roomId];
-    if (!room) return;
-    room.votes[socket.id] = voteFor;
-
-    if (Object.keys(room.votes).length === Object.keys(room.players).length) {
-      const tally = {};
-      Object.values(room.votes).forEach(v => tally[v] = (tally[v] || 0) + 1);
-      const votedOut = Object.entries(tally).sort((a,b)=>b[1]-a[1])[0][0];
-      io.to(roomId).emit("results", { votedOut, imposter: room.imposter });
-    }
-  });
-
+ids.forEach(id => {
+io.to(id).emit("role", {
+imposter: id === imposter,
+word: id === imposter ? null : r.word,
+category: r.category
+});
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log("Server running on port " + PORT));
+
+io.to(room).emit("turn", r.turnOrder[r.currentTurn]);
+});
+
+
+socket.on("nextTurn", room => {
+const r = rooms[room];
+if (!r) return;
+r.currentTurn++;
+if (r.currentTurn < r.turnOrder.length) {
+io.to(room).emit("turn", r.turnOrder[r.currentTurn]);
+}
+});
+
+
+socket.on("startVoting", room => {
+const r = rooms[room];
+if (!r) return;
+r.state = "voting";
+r.votes = {};
+io.to(room).emit("votingStart");
+});
+
+
+socket.on("vote", ({ room, target }) => {
+const r = rooms[room];
+if (!r) return;
+r.votes[target] = (r.votes[target] || 0) + 1;
+});
+
+
+socket.on("endVoting", room => {
+const r = rooms[room];
+if (!r) return;
+
+
+let max = 0, votedOut = null;
+for (let id in r.votes) {
+if (r.votes[id] > max) {
+max = r.votes[id];
+votedOut = id;
+}
+}
+
+
+const crewWin = votedOut === r.imposter;
+
+
+io.to(room).emit("gameOver", {
+imposter: r.players[r.imposter].name,
+word: r.word,
+winner: crewWin ? "Crewmates" : "Imposter"
+});
+
+
+r.state = "lobby";
+});
+
+
+socket.on("chat", ({ room, msg, name }) => {
+io.to(room).emit("chat", { name, msg });
+});
+
+
+socket.on("disconnect", () => {
+for (let room in rooms) {
+delete rooms[room].players[socket.id];
+}
+});
+});
+
+
+server.listen(process.env.PORT || 3000);
