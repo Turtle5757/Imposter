@@ -18,7 +18,6 @@ const WORDS = [
 const rooms = {};
 
 io.on("connection", (socket) => {
-  // send room list
   socket.emit("roomList", getRoomList());
 
   socket.on("createRoom", ({ name, room }) => {
@@ -29,7 +28,8 @@ io.on("connection", (socket) => {
       state: "lobby",
       turnOrder: [],
       currentTurn: 0,
-      votes: {}
+      votes: {},
+      clues: []
     };
     rooms[room].players[socket.id] = { name };
     socket.join(room);
@@ -61,8 +61,8 @@ io.on("connection", (socket) => {
     r.currentTurn = 0;
     r.state = "reveal";
     r.votes = {};
+    r.clues = [];
 
-    // send roles
     ids.forEach((id) => {
       io.to(id).emit("role", {
         imposter: id === imposter,
@@ -84,18 +84,14 @@ io.on("connection", (socket) => {
     const r = rooms[room];
     if (!r || r.state !== "clues") return;
     if (socket.id !== r.turnOrder[r.currentTurn]) return;
-    io.to(room).emit("newClue", {
-      player: r.players[socket.id].name,
-      clue
-    });
-  });
-
-  socket.on("nextTurn", (room) => {
-    const r = rooms[room];
-    if (!r || r.state !== "clues") return;
+    r.clues.push({ player: r.players[socket.id].name, clue });
+    io.to(room).emit("newClue", { player: r.players[socket.id].name, clue });
+    // automatically advance turn
     r.currentTurn++;
     if (r.currentTurn < r.turnOrder.length) {
       io.to(room).emit("turn", r.turnOrder[r.currentTurn]);
+    } else {
+      io.to(room).emit("allTurnsDone");
     }
   });
 
@@ -104,38 +100,40 @@ io.on("connection", (socket) => {
     if (!r) return;
     r.state = "voting";
     r.votes = {};
+    r.votedPlayers = new Set();
     io.to(room).emit("votingStart", Object.keys(r.players).map(id => ({ id, name: r.players[id].name })));
   });
 
   socket.on("vote", ({ room, target }) => {
     const r = rooms[room];
     if (!r || r.state !== "voting") return;
+    if (r.votedPlayers.has(socket.id)) return; // prevent double voting
     r.votes[target] = (r.votes[target] || 0) + 1;
-  });
+    r.votedPlayers.add(socket.id);
 
-  socket.on("endVoting", (room) => {
-    const r = rooms[room];
-    if (!r) return;
-    let maxVotes = 0;
-    let votedOut = null;
-    for (const id in r.votes) {
-      if (r.votes[id] > maxVotes) {
-        maxVotes = r.votes[id];
-        votedOut = id;
+    // auto end voting when everyone has voted
+    if (r.votedPlayers.size === Object.keys(r.players).length) {
+      let maxVotes = 0;
+      let votedOut = null;
+      for (const id in r.votes) {
+        if (r.votes[id] > maxVotes) {
+          maxVotes = r.votes[id];
+          votedOut = id;
+        }
       }
+      const crewWin = votedOut === r.imposter;
+      io.to(room).emit("gameOver", {
+        imposter: r.players[r.imposter]?.name || "Unknown",
+        word: r.word,
+        winner: crewWin ? "Crewmates" : "Imposter"
+      });
+      r.state = "lobby";
+      r.turnOrder = [];
+      r.currentTurn = 0;
+      r.votes = {};
+      r.clues = [];
+      io.emit("roomList", getRoomList());
     }
-    const crewWin = votedOut === r.imposter;
-    io.to(room).emit("gameOver", {
-      imposter: r.players[r.imposter]?.name || "Unknown",
-      word: r.word,
-      winner: crewWin ? "Crewmates" : "Imposter"
-    });
-
-    r.state = "lobby";
-    r.turnOrder = [];
-    r.currentTurn = 0;
-    r.votes = {};
-    io.emit("roomList", getRoomList());
   });
 
   socket.on("chat", ({ room, msg, name }) => {
@@ -161,6 +159,4 @@ io.on("connection", (socket) => {
   }
 });
 
-server.listen(process.env.PORT || 3000, () => {
-  console.log("Server running");
-});
+server.listen(process.env.PORT || 3000, () => console.log("Server running"));
