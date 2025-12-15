@@ -8,14 +8,17 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-// Example words
+// Words
 const WORDS = [
   { category: "Animal", word: "Elephant" },
   { category: "Food", word: "Pizza" },
   { category: "Place", word: "Beach" },
-  { category: "Object", word: "Laptop" }
+  { category: "Object", word: "Laptop" },
+  { category: "Vehicle", word: "Bicycle" },
+  { category: "Sport", word: "Soccer" }
 ];
 
+// Room structure
 const rooms = {};
 
 io.on("connection", socket => {
@@ -30,7 +33,8 @@ io.on("connection", socket => {
       turnOrder: [],
       currentTurn: 0,
       votes: {},
-      clues: []
+      clues: [],
+      votedPlayers: new Set()
     };
     rooms[room].players[socket.id] = { name };
     socket.join(room);
@@ -61,11 +65,11 @@ io.on("connection", socket => {
     r.turnOrder = [...ids];
     r.currentTurn = 0;
     r.state = "reveal";
-    r.votes = {};
     r.clues = [];
+    r.votes = {};
     r.votedPlayers = new Set();
 
-    // Send role info individually
+    // Send role to each player
     ids.forEach(id => {
       io.to(id).emit("role", {
         imposter: id === imposter,
@@ -91,6 +95,7 @@ io.on("connection", socket => {
     r.clues.push({ player: r.players[socket.id].name, clue });
     io.to(room).emit("newClue", { player: r.players[socket.id].name, clue });
 
+    // Advance turn
     r.currentTurn++;
     if (r.currentTurn < r.turnOrder.length) {
       io.to(room).emit("turn", r.turnOrder[r.currentTurn]);
