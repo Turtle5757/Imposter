@@ -8,17 +8,16 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-// Words
+// Example words
 const WORDS = [
   { category: "Animal", word: "Elephant" },
   { category: "Food", word: "Pizza" },
   { category: "Place", word: "Beach" },
   { category: "Object", word: "Laptop" },
-  { category: "Vehicle", word: "Bicycle" },
+  { category: "Color", word: "Blue" },
   { category: "Sport", word: "Soccer" }
 ];
 
-// Room structure
 const rooms = {};
 
 io.on("connection", socket => {
@@ -65,16 +64,16 @@ io.on("connection", socket => {
     r.turnOrder = [...ids];
     r.currentTurn = 0;
     r.state = "reveal";
-    r.clues = [];
     r.votes = {};
+    r.clues = [];
     r.votedPlayers = new Set();
 
-    // Send role to each player
+    // send role info individually
     ids.forEach(id => {
       io.to(id).emit("role", {
         imposter: id === imposter,
         word: id === imposter ? null : r.word,
-        category: r.category
+        category: wordObj.category
       });
     });
 
@@ -95,7 +94,6 @@ io.on("connection", socket => {
     r.clues.push({ player: r.players[socket.id].name, clue });
     io.to(room).emit("newClue", { player: r.players[socket.id].name, clue });
 
-    // Advance turn
     r.currentTurn++;
     if (r.currentTurn < r.turnOrder.length) {
       io.to(room).emit("turn", r.turnOrder[r.currentTurn]);
@@ -142,12 +140,14 @@ io.on("connection", socket => {
       r.currentTurn = 0;
       r.votes = {};
       r.clues = [];
+      r.votedPlayers = new Set();
       io.emit("roomList", getRoomList());
     }
   });
 
   socket.on("chat", ({ room, msg, name }) => {
-    if (!rooms[room]) return;
+    const r = rooms[room];
+    if (!r || r.state !== "voting") return; // chat only during voting
     io.to(room).emit("chat", { name, msg });
   });
 
