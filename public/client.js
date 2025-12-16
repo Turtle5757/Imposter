@@ -44,6 +44,17 @@ socket.on("roomList", (rooms) => {
   });
 });
 
+// --- Player list ---
+socket.on("playerList", (players) => {
+  const ul = document.getElementById("playerList");
+  ul.innerHTML = "";
+  players.forEach(p => {
+    const li = document.createElement("li");
+    li.innerText = p;
+    ul.appendChild(li);
+  });
+});
+
 // --- Game Start ---
 function startGame() {
   const category = document.getElementById("categorySelect").value;
@@ -105,6 +116,16 @@ socket.on("votingPhase", (players) => {
   });
 });
 
+function sendVoteChat() {
+  const msg = document.getElementById("voteChatInput").value;
+  if (!msg) return;
+  const chatDiv = document.getElementById("voteChat");
+  const p = document.createElement("p");
+  p.innerText = msg;
+  chatDiv.appendChild(p);
+  document.getElementById("voteChatInput").value = "";
+}
+
 // --- Game End ---
 socket.on("gameEnd", ({ imposter, word, winner }) => {
   alert(`Game Over!\nImposter: ${imposter}\nWord: ${word}\nWinner: ${winner}`);
@@ -117,4 +138,5 @@ function playAgain() {
   document.getElementById("clues").innerHTML = "";
   document.getElementById("turnInfo").innerText = "";
   document.getElementById("voting").classList.add("hidden");
+  document.getElementById("voteChat").innerHTML = "";
 }
