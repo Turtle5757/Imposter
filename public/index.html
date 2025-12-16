@@ -1,15 +1,11 @@
 <!DOCTYPE html>
 <html>
-<head>
-<link rel="stylesheet" href="style.css">
-</head>
+<head><link rel="stylesheet" href="style.css"></head>
 <body>
 <h1>Imposter Online</h1>
 <input id="name" placeholder="Name">
-<button id="create">Create Room</button>
+<button onclick="createRoom()">Create Room</button>
 <ul id="rooms"></ul>
-
-
 <script src="/socket.io/socket.io.js"></script>
 <script src="client.js"></script>
 </body>
