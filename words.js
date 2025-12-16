@@ -1,6 +1,7 @@
 module.exports = [
-{ category: 'Fruits', word: 'Apple' },
-{ category: 'Animals', word: 'Elephant' },
-{ category: 'Places', word: 'Beach' },
-{ category: 'Objects', word: 'Chair' }
+{ category: 'Fruit', word: 'Apple' },
+{ category: 'Animal', word: 'Elephant' },
+{ category: 'Place', word: 'Beach' },
+{ category: 'Object', word: 'Chair' },
+{ category: 'Food', word: 'Pizza' }
 ];
