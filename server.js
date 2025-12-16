@@ -9,13 +9,79 @@ const io = new Server(server);
 app.use(express.static("public"));
 
 const WORDS = [
-  { category: "Animal", word: "Elephant", hint: "Has a trunk" },
-  { category: "Food", word: "Pizza", hint: "Often sliced into pieces" },
-  { category: "Place", word: "Beach", hint: "Where people sunbathe" },
-  { category: "Object", word: "Laptop", hint: "Closes like a book" },
-  { category: "Color", word: "Blue", hint: "Calm color of the ocean" },
-  { category: "Sport", word: "Soccer", hint: "Team sport with goals" }
+  // Animals
+  { category: "Animal", word: "Elephant", hint: "Earth’s gentle giant with a long reach" },
+  { category: "Animal", word: "Tiger", hint: "Striped shadow of the forest" },
+  { category: "Animal", word: "Penguin", hint: "Dressed for formal occasions in the cold" },
+  { category: "Animal", word: "Kangaroo", hint: "Jumps through life with a hidden pouch" },
+  { category: "Animal", word: "Owl", hint: "Night whisperer with wide eyes" },
+  { category: "Animal", word: "Dolphin", hint: "Intelligent swimmer in a playful pod" },
+  { category: "Animal", word: "Giraffe", hint: "Towering browser of leafy heights" },
+  { category: "Animal", word: "Hippopotamus", hint: "River shadow, massive but grounded" },
+  { category: "Animal", word: "Cheetah", hint: "Speed in spotted form" },
+  { category: "Animal", word: "Octopus", hint: "Master of disguise under the waves" },
+
+  // Food
+  { category: "Food", word: "Pizza", hint: "Shared circles of warmth and flavor" },
+  { category: "Food", word: "Sushi", hint: "Artful rolls of delicate balance" },
+  { category: "Food", word: "Chocolate", hint: "Sweetened essence from distant lands" },
+  { category: "Food", word: "Burger", hint: "Layered surprise between soft shields" },
+  { category: "Food", word: "Spaghetti", hint: "Strings tangled in saucy mystery" },
+  { category: "Food", word: "Taco", hint: "Folded vessel for hidden treasures" },
+  { category: "Food", word: "Pancake", hint: "Golden discs for morning rituals" },
+  { category: "Food", word: "Salad", hint: "Crisp mosaic of green and crunch" },
+  { category: "Food", word: "Cheese", hint: "Curdled essence of pastures" },
+  { category: "Food", word: "Apple", hint: "Round temptation of orchard tales" },
+
+  // Places
+  { category: "Place", word: "Beach", hint: "Border where sand meets liquid horizon" },
+  { category: "Place", word: "Mountain", hint: "Earth rises to kiss the sky" },
+  { category: "Place", word: "Desert", hint: "Endless expanse of sun and silence" },
+  { category: "Place", word: "Forest", hint: "Vertical maze of green whispers" },
+  { category: "Place", word: "City", hint: "Concrete jungle humming with life" },
+  { category: "Place", word: "Cave", hint: "Subterranean hollow of echoes" },
+  { category: "Place", word: "Island", hint: "Lonely land embraced by water" },
+  { category: "Place", word: "Park", hint: "Managed green for fleeting calm" },
+  { category: "Place", word: "Zoo", hint: "Encased wilds observed from afar" },
+  { category: "Place", word: "Library", hint: "Quiet vaults of stored thoughts" },
+
+  // Objects
+  { category: "Object", word: "Laptop", hint: "Foldable brain in a box" },
+  { category: "Object", word: "Phone", hint: "Pocketed voice from afar" },
+  { category: "Object", word: "Clock", hint: "Spinning hands track invisible flow" },
+  { category: "Object", word: "Chair", hint: "Silent support for upright rest" },
+  { category: "Object", word: "Umbrella", hint: "Suspended shield from falling sky" },
+  { category: "Object", word: "Backpack", hint: "Carry life on your shoulders" },
+  { category: "Object", word: "Glasses", hint: "Windows to sharpen perception" },
+  { category: "Object", word: "Pen", hint: "Portable thought inscriber" },
+  { category: "Object", word: "Book", hint: "Bound portal to unseen worlds" },
+  { category: "Object", word: "Key", hint: "Metal whisper unlocking secrets" },
+
+  // Colors
+  { category: "Color", word: "Blue", hint: "Vast calm beyond the eye" },
+  { category: "Color", word: "Red", hint: "Heat, pulse, and alert" },
+  { category: "Color", word: "Green", hint: "Life’s signal, subtle and quiet" },
+  { category: "Color", word: "Yellow", hint: "Radiance caught in pigment" },
+  { category: "Color", word: "Purple", hint: "Mystery blend of cold and warm" },
+  { category: "Color", word: "Orange", hint: "Sunset pressed into hue" },
+  { category: "Color", word: "Black", hint: "Depth where light is absent" },
+  { category: "Color", word: "White", hint: "Blank canvas, pure reflection" },
+  { category: "Color", word: "Pink", hint: "Soft tint of warmth and blush" },
+  { category: "Color", word: "Gray", hint: "Balance between extremes" },
+
+  // Sports
+  { category: "Sport", word: "Soccer", hint: "Round pursuit on grassy expanse" },
+  { category: "Sport", word: "Basketball", hint: "Arc and bounce to victory" },
+  { category: "Sport", word: "Tennis", hint: "Racketed back-and-forth duel" },
+  { category: "Sport", word: "Baseball", hint: "Diamond game of bat and run" },
+  { category: "Sport", word: "Swimming", hint: "Fluid motion against resistance" },
+  { category: "Sport", word: "Boxing", hint: "Gloved contest in a confined ring" },
+  { category: "Sport", word: "Cycling", hint: "Two wheels, endless pedaling" },
+  { category: "Sport", word: "Skiing", hint: "Slide along frozen slopes" },
+  { category: "Sport", word: "Volleyball", hint: "Net battle with hands aloft" },
+  { category: "Sport", word: "Golf", hint: "Small object, long journey to hole" }
 ];
+
 
 const rooms = {};
 
