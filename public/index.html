@@ -42,6 +42,11 @@
     <button onclick="startVote()">Start Voting</button>
   </div>
 
+  <div id="playerListDiv">
+    <h3>Players in Room:</h3>
+    <ul id="playerList"></ul>
+  </div>
+
   <div id="roleInfo"></div>
   <div id="clues"></div>
   <div id="turnInfo"></div>
@@ -49,6 +54,9 @@
   <div id="voting" class="hidden">
     <h3>Vote for the Imposter:</h3>
     <ul id="voteList"></ul>
+    <input id="voteChatInput" placeholder="Chat during voting">
+    <button onclick="sendVoteChat()">Send</button>
+    <div id="voteChat"></div>
   </div>
 
   <button id="playAgainBtn" class="hidden" onclick="playAgain()">Play Again</button>
