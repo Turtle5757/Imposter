@@ -90,10 +90,6 @@ socket.on("turn", id=>{
   }
 });
 
-socket.on("allTurnsDone", ()=>{ 
-  document.getElementById("turn").innerText="All clues done. Host can start voting."; 
-});
-
 function sendClue(){
   const input=document.getElementById("clueInput"); 
   if(!input.value) return;
@@ -101,6 +97,9 @@ function sendClue(){
   input.value=""; 
   document.getElementById("clueInput").disabled=true; 
   document.getElementById("sendClueBtn").disabled=true;
+
+  // loop turn to next player continuously
+  socket.emit("nextTurn", ROOM);
 }
 
 socket.on("newClue", data=>{ 
@@ -154,6 +153,9 @@ function playAgain(){
   document.getElementById("lobby").hidden=false; 
   document.getElementById("room").value=""; 
   document.getElementById("name").value=""; 
+  document.getElementById("chatContainer").hidden=true;
+  document.getElementById("chat").innerHTML="";
+  document.getElementById("clues").innerHTML="";
   currentPhase="lobby"; 
 }
 
