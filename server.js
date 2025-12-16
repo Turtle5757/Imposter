@@ -87,12 +87,12 @@ const WORDS = [
 const rooms = {};
 
 io.on("connection", (socket) => {
-
   socket.on("createRoom", (roomName, callback) => {
     if (rooms[roomName]) return callback(false);
+    const playerName = socket.handshake.query.name || "Host";
     rooms[roomName] = { host: socket.id, players: {}, state: "waiting" };
     socket.join(roomName);
-    rooms[roomName].players[socket.id] = { name: "Host" };
+    rooms[roomName].players[socket.id] = { name: playerName };
     callback(true);
     io.emit("roomList", Object.keys(rooms));
   });
