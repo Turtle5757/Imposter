@@ -4,6 +4,7 @@ let myId = "";
 let isImposter = false;
 let roleWord = "";
 let currentPhase = "lobby";
+let isHost = false;
 
 socket.on("connect", ()=>{ myId = socket.id; });
 
@@ -17,24 +18,41 @@ socket.on("roomList", list=>{
   });
 });
 
+socket.on("roomUpdate", room=>{
+  if(room.players[myId]?.name === undefined) return;
+  const playerDiv = document.getElementById("playerList");
+  playerDiv.innerHTML="<h4>Players in room:</h4>";
+  for(const id in room.players){
+    const p = document.createElement("p");
+    p.innerText=room.players[id].name + (id===room.host?" (Host)":"");
+    playerDiv.appendChild(p);
+  }
+  isHost = (room.host === myId);
+  document.getElementById("startGameBtn").hidden = !isHost;
+});
+
 function createRoom(){
   NAME=document.getElementById("name").value; ROOM=document.getElementById("room").value;
-  if(!NAME||!ROOM) return; socket.emit("createRoom",{name:NAME,room:ROOM}); enterGame();
+  if(!NAME||!ROOM) return; 
+  socket.emit("createRoom",{name:NAME,room:ROOM}); 
+  enterWaitingRoom();
 }
 
 function joinRoom(){
   NAME=document.getElementById("name").value; ROOM=document.getElementById("room").value;
-  if(!NAME||!ROOM) return; socket.emit("joinRoom",{name:NAME,room:ROOM}); enterGame();
+  if(!NAME||!ROOM) return; 
+  socket.emit("joinRoom",{name:NAME,room:ROOM}); 
+  enterWaitingRoom();
 }
 
-function enterGame(){
-  currentPhase="reveal";
-  document.getElementById("lobby").hidden=true;
-  document.getElementById("game").hidden=false;
-  document.getElementById("clues").innerHTML="";
-  document.getElementById("chat").innerHTML="";
-  document.getElementById("chatContainer").hidden=true;
+function enterWaitingRoom(){
+  currentPhase="lobby";
+  document.getElementById("lobby").hidden=false;
+  document.getElementById("game").hidden=true;
+  document.getElementById("endScreen").hidden=true;
 }
+
+function startGame(){ socket.emit("startGame",ROOM); }
 
 socket.on("role", data=>{
   isImposter=data.imposter;
@@ -45,6 +63,9 @@ socket.on("role", data=>{
 });
 
 socket.on("revealPhase", ()=>{
+  document.getElementById("lobby").hidden=true;
+  document.getElementById("game").hidden=false;
+  currentPhase="reveal";
   document.getElementById("revealPhaseMsg").innerText="Memorize your word / category...";
 });
 
@@ -52,6 +73,7 @@ socket.on("cluePhase", ()=>{
   currentPhase="clues"; 
   document.getElementById("revealPhaseMsg").innerText="";
   enableClueTurn();
+  document.getElementById("startVoteBtn").hidden = !isHost;
 });
 
 socket.on("turn", id=>{
@@ -61,8 +83,7 @@ socket.on("turn", id=>{
     turnLabel.innerText="Your Turn!"; 
     document.getElementById("clueInput").disabled=false; 
     document.getElementById("sendClueBtn").disabled=false; 
-  }
-  else { 
+  } else { 
     turnLabel.innerText="Waiting for other player's turn"; 
     document.getElementById("clueInput").disabled=true; 
     document.getElementById("sendClueBtn").disabled=true; 
@@ -96,7 +117,7 @@ function startVoting(){
 
 socket.on("votingStart", players=>{
   const div=document.getElementById("clues"); 
-  div.innerHTML+="<p>Voting started! Click a player to vote:</p>";
+  div.innerHTML="<p>Voting started! Click a player to vote:</p>";
   players.forEach(p=>{
     const btn=document.createElement("button"); 
     btn.textContent=p.name; 
