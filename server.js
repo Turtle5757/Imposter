@@ -10,6 +10,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.static("public"));
 
+// --- Ultra-hard words and hints ---
 const WORDS = [
   // Animals
   { category: "Animal", word: "Elephant", hint: "Earth’s gentle giant with a long reach" },
@@ -22,7 +23,6 @@ const WORDS = [
   { category: "Animal", word: "Hippopotamus", hint: "River shadow, massive but grounded" },
   { category: "Animal", word: "Cheetah", hint: "Speed in spotted form" },
   { category: "Animal", word: "Octopus", hint: "Master of disguise under the waves" },
-
   // Food
   { category: "Food", word: "Pizza", hint: "Shared circles of warmth and flavor" },
   { category: "Food", word: "Sushi", hint: "Artful rolls of delicate balance" },
@@ -34,7 +34,6 @@ const WORDS = [
   { category: "Food", word: "Salad", hint: "Crisp mosaic of green and crunch" },
   { category: "Food", word: "Cheese", hint: "Curdled essence of pastures" },
   { category: "Food", word: "Apple", hint: "Round temptation of orchard tales" },
-
   // Places
   { category: "Place", word: "Beach", hint: "Border where sand meets liquid horizon" },
   { category: "Place", word: "Mountain", hint: "Earth rises to kiss the sky" },
@@ -46,7 +45,6 @@ const WORDS = [
   { category: "Place", word: "Park", hint: "Managed green for fleeting calm" },
   { category: "Place", word: "Zoo", hint: "Encased wilds observed from afar" },
   { category: "Place", word: "Library", hint: "Quiet vaults of stored thoughts" },
-
   // Objects
   { category: "Object", word: "Laptop", hint: "Foldable brain in a box" },
   { category: "Object", word: "Phone", hint: "Pocketed voice from afar" },
@@ -58,7 +56,6 @@ const WORDS = [
   { category: "Object", word: "Pen", hint: "Portable thought inscriber" },
   { category: "Object", word: "Book", hint: "Bound portal to unseen worlds" },
   { category: "Object", word: "Key", hint: "Metal whisper unlocking secrets" },
-
   // Colors
   { category: "Color", word: "Blue", hint: "Vast calm beyond the eye" },
   { category: "Color", word: "Red", hint: "Heat, pulse, and alert" },
@@ -70,7 +67,6 @@ const WORDS = [
   { category: "Color", word: "White", hint: "Blank canvas, pure reflection" },
   { category: "Color", word: "Pink", hint: "Soft tint of warmth and blush" },
   { category: "Color", word: "Gray", hint: "Balance between extremes" },
-
   // Sports
   { category: "Sport", word: "Soccer", hint: "Round pursuit on grassy expanse" },
   { category: "Sport", word: "Basketball", hint: "Arc and bounce to victory" },
@@ -87,6 +83,7 @@ const WORDS = [
 const rooms = {};
 
 io.on("connection", (socket) => {
+
   socket.on("createRoom", (roomName, callback) => {
     if (rooms[roomName]) return callback(false);
     const playerName = socket.handshake.query.name || "Host";
