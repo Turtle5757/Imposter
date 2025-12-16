@@ -10,6 +10,7 @@
   .hidden { display: none; }
   #clues div { margin-bottom: 5px; }
   button { margin: 3px; }
+  li { cursor: pointer; }
 </style>
 </head>
 <body>
@@ -20,7 +21,6 @@
   <input id="playerName" placeholder="Your Name">
   <input id="roomName" placeholder="Room Name">
   <button onclick="createRoom()">Create Room</button>
-  <button onclick="joinRoom()">Join Room</button>
   <h3>Available Rooms:</h3>
   <ul id="roomList"></ul>
 </div>
