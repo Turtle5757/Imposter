@@ -58,7 +58,7 @@ socket.on("role", data=>{
   isImposter=data.imposter;
   roleWord=data.word;
   document.getElementById("role").innerText = data.imposter ? 
-    "You are IMPOSTER\nCategory: "+data.category :
+    "You are IMPOSTER\nCategory: "+data.category+"\nHint: "+data.hint :
     "Word: "+data.word;
 });
 
@@ -110,11 +110,12 @@ socket.on("newClue", data=>{
 
 function startVoting(){ 
   currentPhase="voting"; 
-  document.getElementById("chatContainer").hidden=false;
   socket.emit("startVoting",ROOM); 
 }
 
 socket.on("votingStart", players=>{
+  currentPhase = "voting";
+  document.getElementById("chatContainer").hidden = false; // visible for all
   const div=document.getElementById("clues"); 
   div.innerHTML="<p>Voting started! Click a player to vote:</p>";
   players.forEach(p=>{
