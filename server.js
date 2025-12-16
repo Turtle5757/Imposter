@@ -93,13 +93,13 @@ io.on("connection", socket => {
 
     r.clues.push({ player: r.players[socket.id].name, clue });
     io.to(room).emit("newClue", { player: r.players[socket.id].name, clue });
+  });
 
-    r.currentTurn++;
-    if (r.currentTurn < r.turnOrder.length) {
-      io.to(room).emit("turn", r.turnOrder[r.currentTurn]);
-    } else {
-      io.to(room).emit("allTurnsDone");
-    }
+  socket.on("nextTurn", room => {
+    const r = rooms[room];
+    if(!r || r.state !== "clues") return;
+    r.currentTurn = (r.currentTurn + 1) % r.turnOrder.length;
+    io.to(room).emit("turn", r.turnOrder[r.currentTurn]);
   });
 
   socket.on("startVoting", room => {
