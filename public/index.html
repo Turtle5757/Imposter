@@ -7,12 +7,14 @@
 </head>
 <body>
 <div id="lobby">
-  <h2>Lobby</h2>
+  <h2>Lobby / Waiting Room</h2>
   <ul id="roomList"></ul>
   <input id="name" placeholder="Your Name">
   <input id="room" placeholder="Room Name">
   <button onclick="createRoom()">Create Room</button>
   <button onclick="joinRoom()">Join Room</button>
+  <div id="playerList"></div>
+  <button id="startGameBtn" onclick="startGame()" hidden>Start Game (Host Only)</button>
 </div>
 
 <div id="game" hidden>
@@ -22,7 +24,7 @@
   <div id="clues"></div>
   <input id="clueInput" placeholder="Type your clue">
   <button id="sendClueBtn" onclick="sendClue()">Send Clue</button>
-  <button id="startVoteBtn" onclick="startVoting()">Start Voting</button>
+  <button id="startVoteBtn" onclick="startVoting()" hidden>Start Voting (Host Only)</button>
 
   <div id="chatContainer" hidden>
     <h3>Voting Chat</h3>
