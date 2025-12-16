@@ -9,12 +9,12 @@ const io = new Server(server);
 app.use(express.static("public"));
 
 const WORDS = [
-  { category: "Animal", word: "Elephant" },
-  { category: "Food", word: "Pizza" },
-  { category: "Place", word: "Beach" },
-  { category: "Object", word: "Laptop" },
-  { category: "Color", word: "Blue" },
-  { category: "Sport", word: "Soccer" }
+  { category: "Animal", word: "Elephant", hint: "Has a trunk" },
+  { category: "Food", word: "Pizza", hint: "Often sliced into pieces" },
+  { category: "Place", word: "Beach", hint: "Where people sunbathe" },
+  { category: "Object", word: "Laptop", hint: "Closes like a book" },
+  { category: "Color", word: "Blue", hint: "Calm color of the ocean" },
+  { category: "Sport", word: "Soccer", hint: "Team sport with goals" }
 ];
 
 const rooms = {};
@@ -62,6 +62,7 @@ io.on("connection", socket => {
     r.imposter = imposter;
     r.word = wordObj.word;
     r.category = wordObj.category;
+    r.hint = wordObj.hint;
     r.turnOrder = [...ids];
     r.currentTurn = 0;
     r.state = "reveal";
@@ -73,7 +74,8 @@ io.on("connection", socket => {
       io.to(id).emit("role", {
         imposter: id === imposter,
         word: id === imposter ? null : r.word,
-        category: wordObj.category
+        category: wordObj.category,
+        hint: id === imposter ? wordObj.hint : null
       });
     });
 
