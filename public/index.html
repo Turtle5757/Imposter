@@ -1,43 +1,57 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Imposter Online</title>
-<link rel="stylesheet" href="style.css">
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  #game { display: none; }
+  .hidden { display: none; }
+  #clues div { margin-bottom: 5px; }
+  button { margin: 3px; }
+</style>
 </head>
 <body>
+
+<h1>Imposter Online</h1>
+
 <div id="lobby">
-  <h2>Lobby / Waiting Room</h2>
-  <ul id="roomList"></ul>
-  <input id="name" placeholder="Your Name">
-  <input id="room" placeholder="Room Name">
+  <input id="playerName" placeholder="Your Name">
+  <input id="roomName" placeholder="Room Name">
   <button onclick="createRoom()">Create Room</button>
   <button onclick="joinRoom()">Join Room</button>
-  <div id="playerList"></div>
-  <button id="startGameBtn" onclick="startGame()" hidden>Start Game (Host Only)</button>
+  <h3>Available Rooms:</h3>
+  <ul id="roomList"></ul>
 </div>
 
-<div id="game" hidden>
-  <h2 id="role"></h2>
-  <div id="revealPhaseMsg"></div>
-  <h3 id="turn"></h3>
-  <div id="clues"></div>
-  <input id="clueInput" placeholder="Type your clue">
-  <button id="sendClueBtn" onclick="sendClue()">Send Clue</button>
-  <button id="startVoteBtn" onclick="startVoting()" hidden>Start Voting (Host Only)</button>
-
-  <div id="chatContainer" hidden>
-    <h3>Voting Chat</h3>
-    <div id="chat"></div>
-    <input id="msg" placeholder="Message">
-    <button onclick="sendChat()">Send</button>
+<div id="game">
+  <div id="hostControls" class="hidden">
+    <label>Category: </label>
+    <select id="categorySelect">
+      <option value="Random">Random</option>
+      <option value="Animal">Animal</option>
+      <option value="Food">Food</option>
+      <option value="Place">Place</option>
+      <option value="Object">Object</option>
+      <option value="Color">Color</option>
+      <option value="Sport">Sport</option>
+    </select>
+    <label><input type="checkbox" id="hintsToggle" checked> Hints On</label>
+    <button onclick="startGame()">Start Game</button>
+    <button onclick="startVote()">Start Voting</button>
   </div>
-</div>
 
-<div id="endScreen" hidden>
-  <h2>Game Over</h2>
-  <p id="endInfo"></p>
-  <button onclick="playAgain()">Play Again</button>
+  <div id="roleInfo"></div>
+  <div id="clues"></div>
+  <div id="turnInfo"></div>
+
+  <div id="voting" class="hidden">
+    <h3>Vote for the Imposter:</h3>
+    <ul id="voteList"></ul>
+  </div>
+
+  <button id="playAgainBtn" class="hidden" onclick="playAgain()">Play Again</button>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
