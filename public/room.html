@@ -3,11 +3,12 @@
 <head><link rel="stylesheet" href="style.css"></head>
 <body>
 <h2 id="room"></h2>
-<div id="info"></div>
-<div id="chat"></div>
-<input id="input"><button id="send">Send</button>
-
-
+<div id="role"></div>
+<div id="clues"></div>
+<input id="clueInput"><button onclick="sendClue()">Clue</button>
+<button onclick="startGame()">Start Game</button>
+<button onclick="startVote()">Start Vote</button>
+<div id="votes"></div>
 <script src="/socket.io/socket.io.js"></script>
 <script src="client.js"></script>
 </body>
