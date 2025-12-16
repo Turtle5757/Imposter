@@ -16,14 +16,13 @@ function createRoom() {
   });
 }
 
-function joinRoom() {
-  const room = document.getElementById("roomName").value;
-  const name = document.getElementById("playerName").value || "Player";
-  socket.emit("joinRoom", room, name, (success) => {
+function joinRoom(name, room) {
+  const playerName = document.getElementById("playerName").value || name;
+  socket.emit("joinRoom", room, playerName, (success) => {
     if (success) {
       ROOM = room;
       enterGame();
-    } else alert("Room does not exist!");
+    } else alert("Failed to join room");
   });
 }
 
@@ -32,6 +31,18 @@ function enterGame() {
   document.getElementById("game").style.display = "block";
   if (isHost) document.getElementById("hostControls").classList.remove("hidden");
 }
+
+// --- Live Room List ---
+socket.on("roomList", (rooms) => {
+  const ul = document.getElementById("roomList");
+  ul.innerHTML = "";
+  rooms.forEach(room => {
+    const li = document.createElement("li");
+    li.innerText = room;
+    li.onclick = () => joinRoom("", room);
+    ul.appendChild(li);
+  });
+});
 
 // --- Game Start ---
 function startGame() {
