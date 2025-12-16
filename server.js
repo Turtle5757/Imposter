@@ -51,6 +51,8 @@ io.on("connection", socket => {
   socket.on("startGame", room => {
     const r = rooms[room];
     if (!r) return;
+    if (socket.id !== r.host) return;
+
     const ids = Object.keys(r.players);
     if (ids.length < 2) return;
 
@@ -102,7 +104,9 @@ io.on("connection", socket => {
 
   socket.on("startVoting", room => {
     const r = rooms[room];
-    if (!r) return;
+    if (!r || r.state !== "clues") return;
+    if (socket.id !== r.host) return;
+
     r.state = "voting";
     r.votes = {};
     r.votedPlayers = new Set();
