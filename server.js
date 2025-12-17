@@ -8,29 +8,38 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-// Words per category with harder hints
-const WORDS = {
-  Animal: [
-    { word: "Elephant", hints: ["Large memory", "Trunked mammal", "Gray giant"] },
-    { word: "Dolphin", hints: ["Aquatic mammal", "Intelligent swimmer", "Not a fish"] },
-    { word: "Kangaroo", hints: ["Jumps far", "Pouch mammal", "Native to Australia"] }
-  ],
-  Food: [
-    { word: "Pizza", hints: ["Round and cheesy", "Popular Italian dish", "Slices served"] },
-    { word: "Sushi", hints: ["Raw ingredient dish", "Japanese cuisine", "Rice and fish"] },
-    { word: "Taco", hints: ["Mexican wrap", "Folded meal", "Often spicy"] }
-  ],
-  Place: [
-    { word: "Beach", hints: ["Sandy area", "Sun and waves", "Near ocean"] },
-    { word: "Mountains", hints: ["High elevation", "Peaks and slopes", "Hikers like me"] },
-    { word: "Desert", hints: ["Dry place", "Cactus habitat", "Very hot"] }
-  ],
-  Object: [
-    { word: "Laptop", hints: ["Portable device", "Closes like a book", "Has keyboard"] },
-    { word: "Chair", hints: ["Sitting furniture", "Four legs", "Back support"] },
-    { word: "Umbrella", hints: ["Protects from rain", "Opens and closes", "Handle attached"] }
-  ]
-};
+// --- Words with harder hints ---
+const WORDS = [
+  { category: "Animal", word: "Elephant", hint: "Earth’s gentle giant with a long reach" },
+  { category: "Animal", word: "Tiger", hint: "Striped shadow of the forest" },
+  { category: "Animal", word: "Penguin", hint: "Dressed for formal occasions in the cold" },
+  { category: "Animal", word: "Kangaroo", hint: "Jumps through life with a hidden pouch" },
+  { category: "Animal", word: "Owl", hint: "Night whisperer with wide eyes" },
+  { category: "Food", word: "Pizza", hint: "Shared circles of warmth and flavor" },
+  { category: "Food", word: "Sushi", hint: "Artful rolls of delicate balance" },
+  { category: "Food", word: "Chocolate", hint: "Sweetened essence from distant lands" },
+  { category: "Food", word: "Burger", hint: "Layered surprise between soft shields" },
+  { category: "Food", word: "Taco", hint: "Folded vessel for hidden treasures" },
+  { category: "Place", word: "Beach", hint: "Border where sand meets liquid horizon" },
+  { category: "Place", word: "Mountain", hint: "Earth rises to kiss the sky" },
+  { category: "Place", word: "Desert", hint: "Endless expanse of sun and silence" },
+  { category: "Place", word: "Forest", hint: "Vertical maze of green whispers" },
+  { category: "Place", word: "City", hint: "Concrete jungle humming with life" },
+  { category: "Object", word: "Laptop", hint: "Foldable brain in a box" },
+  { category: "Object", word: "Phone", hint: "Pocketed voice from afar" },
+  { category: "Object", word: "Clock", hint: "Spinning hands track invisible flow" },
+  { category: "Object", word: "Chair", hint: "Silent support for upright rest" },
+  { category: "Object", word: "Umbrella", hint: "Suspended shield from falling sky" },
+  { category: "Color", word: "Blue", hint: "Vast calm beyond the eye" },
+  { category: "Color", word: "Red", hint: "Heat, pulse, and alert" },
+  { category: "Color", word: "Green", hint: "Life’s signal, subtle and quiet" },
+  { category: "Color", word: "Yellow", hint: "Radiance caught in pigment" },
+  { category: "Color", word: "Purple", hint: "Mystery blend of cold and warm" },
+  { category: "Sport", word: "Soccer", hint: "Round pursuit on grassy expanse" },
+  { category: "Sport", word: "Basketball", hint: "Arc and bounce to victory" },
+  { category: "Sport", word: "Tennis", hint: "Racketed back-and-forth duel" },
+  { category: "Sport", word: "Baseball", hint: "Diamond game of bat and run" }
+];
 
 const rooms = {};
 
@@ -47,9 +56,7 @@ io.on("connection", socket => {
       currentTurn: 0,
       votes: {},
       clues: [],
-      votedPlayers: new Set(),
-      category: null,
-      hintsOn: true
+      votedPlayers: new Set()
     };
     rooms[room].players[socket.id] = { name };
     socket.join(room);
@@ -65,36 +72,21 @@ io.on("connection", socket => {
     io.emit("roomList", getRoomList());
   });
 
-  socket.on("selectCategory", ({ room, category, hintsOn }) => {
-    const r = rooms[room];
-    if (!r) return;
-    if (socket.id !== r.host) return;
-    r.category = category || null;
-    r.hintsOn = hintsOn;
-  });
-
-  socket.on("startGame", room => {
+  socket.on("startGame", ({ room, category = "Random", hintsOn = true }) => {
     const r = rooms[room];
     if (!r || socket.id !== r.host) return;
     const ids = Object.keys(r.players);
     if (ids.length < 2) return;
 
-    // Pick imposter
-    const imposter = ids[Math.floor(Math.random() * ids.length)];
-
-    // Pick word
-    let category = r.category;
-    if (!category) {
-      const cats = Object.keys(WORDS);
-      category = cats[Math.floor(Math.random() * cats.length)];
-    }
-    const words = WORDS[category];
+    // Select word based on category
+    let words = (category !== "Random") ? WORDS.filter(w => w.category === category) : WORDS;
     const wordObj = words[Math.floor(Math.random() * words.length)];
+    const imposter = ids[Math.floor(Math.random() * ids.length)];
 
     r.imposter = imposter;
     r.word = wordObj.word;
-    r.category = category;
-    r.wordHints = wordObj.hints;
+    r.category = wordObj.category;
+    r.hint = hintsOn ? wordObj.hint : null;
     r.turnOrder = [...ids];
     r.currentTurn = 0;
     r.state = "reveal";
@@ -106,8 +98,8 @@ io.on("connection", socket => {
       io.to(id).emit("role", {
         imposter: id === imposter,
         word: id === imposter ? null : r.word,
-        category: category,
-        hints: r.hintsOn && id !== imposter ? wordObj.hints : []
+        category: wordObj.category,
+        hint: id === imposter ? r.hint : null
       });
     });
 
@@ -128,12 +120,8 @@ io.on("connection", socket => {
     r.clues.push({ player: r.players[socket.id].name, clue });
     io.to(room).emit("newClue", { player: r.players[socket.id].name, clue });
 
-    r.currentTurn++;
-    if (r.currentTurn < r.turnOrder.length) {
-      io.to(room).emit("turn", r.turnOrder[r.currentTurn]);
-    } else {
-      io.to(room).emit("allTurnsDone");
-    }
+    r.currentTurn = (r.currentTurn + 1) % r.turnOrder.length;
+    io.to(room).emit("turn", r.turnOrder[r.currentTurn]);
   });
 
   socket.on("startVoting", room => {
@@ -156,7 +144,6 @@ io.on("connection", socket => {
     r.votedPlayers.add(socket.id);
 
     if (r.votedPlayers.size === Object.keys(r.players).length) {
-      // Determine voted out
       let maxVotes = 0;
       let votedOut = null;
       for (const id in r.votes) {
@@ -172,18 +159,13 @@ io.on("connection", socket => {
         winner: crewWin ? "Crewmates" : "Imposter"
       });
 
-      // Reset for next game without kicking players
       r.state = "lobby";
       r.turnOrder = [];
       r.currentTurn = 0;
       r.votes = {};
       r.clues = [];
       r.votedPlayers = new Set();
-      r.imposter = null;
-      r.word = null;
-      r.category = null;
-      r.wordHints = [];
-      io.to(room).emit("roomUpdate", r);
+      io.emit("roomList", getRoomList());
     }
   });
 
@@ -197,13 +179,6 @@ io.on("connection", socket => {
     for (const room in rooms) {
       if (rooms[room].players[socket.id]) {
         delete rooms[room].players[socket.id];
-
-        // Transfer host if needed
-        const ids = Object.keys(rooms[room].players);
-        if (rooms[room].host === socket.id && ids.length > 0) {
-          rooms[room].host = ids[0];
-        }
-
         io.to(room).emit("roomUpdate", rooms[room]);
         io.emit("roomList", getRoomList());
       }
