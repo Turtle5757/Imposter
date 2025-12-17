@@ -5,6 +5,9 @@ let NAME = "";
 let myId = "";
 let isHost = false;
 let currentPhase = "lobby";
+let isImposter = false;
+let roleWord = "";
+let hintsOn = true;
 
 const lobby = document.getElementById("lobby");
 const game = document.getElementById("game");
@@ -33,42 +36,14 @@ const msgInput = document.getElementById("msg");
 
 const endInfo = document.getElementById("endInfo");
 
-// POPUP ELEMENT FOR ROLE/WORD
-const rolePopup = document.createElement("div");
-rolePopup.id = "rolePopup";
-rolePopup.style.position = "fixed";
-rolePopup.style.top = "50%";
-rolePopup.style.left = "50%";
-rolePopup.style.transform = "translate(-50%, -50%)";
-rolePopup.style.background = "#222";
-rolePopup.style.color = "white";
-rolePopup.style.border = "2px solid #555";
-rolePopup.style.padding = "20px";
-rolePopup.style.zIndex = "9999";
-rolePopup.style.display = "none";
-rolePopup.style.whiteSpace = "pre-line";
-document.body.appendChild(rolePopup);
-
-function showRolePopup(text) {
-  rolePopup.innerText = text;
-  rolePopup.style.display = "block";
-  setTimeout(() => {
-    rolePopup.style.display = "none";
-  }, 5000);
-}
-
-socket.on("connect", () => {
-  myId = socket.id;
-});
+socket.on("connect", () => { myId = socket.id; });
 
 socket.on("roomList", list => {
   roomList.innerHTML = "";
   list.forEach(r => {
     const li = document.createElement("li");
-    li.textContent = `${r.name} (${r.players})`;
-    li.onclick = () => {
-      roomInput.value = r.name;
-    };
+    li.textContent = `${r.name} (${r.players} players)`;
+    li.onclick = () => { roomInput.value = r.name; };
     roomList.appendChild(li);
   });
 });
@@ -80,8 +55,7 @@ socket.on("roomUpdate", room => {
   playerList.innerHTML = "<h4>Players:</h4>";
   for (const id in room.players) {
     const p = document.createElement("p");
-    p.textContent =
-      room.players[id].name + (id === room.host ? " (Host)" : "");
+    p.textContent = room.players[id].name + (id === room.host ? " (Host)" : "");
     playerList.appendChild(p);
   }
 
@@ -92,36 +66,47 @@ socket.on("roomUpdate", room => {
 function createRoom() {
   NAME = nameInput.value.trim();
   ROOM = roomInput.value.trim();
-  if (!NAME || !ROOM) {
-    alert("Enter a name and room name");
-    return;
-  }
+  if (!NAME || !ROOM) { alert("Enter a name and room"); return; }
   socket.emit("createRoom", { name: NAME, room: ROOM });
 }
 
 function joinRoom() {
   NAME = nameInput.value.trim();
   ROOM = roomInput.value.trim();
-  if (!NAME || !ROOM) {
-    alert("Enter a name and room name");
-    return;
-  }
+  if (!NAME || !ROOM) { alert("Enter a name and room"); return; }
   socket.emit("joinRoom", { name: NAME, room: ROOM });
 }
 
 function startGame() {
   const category = document.getElementById("categorySelect").value;
-  const hintsOn = document.getElementById("hintsToggle").checked;
+  hintsOn = document.getElementById("hintsToggle").checked;
   socket.emit("startGame", { room: ROOM, category, hintsOn });
 }
 
 socket.on("role", data => {
-  // show popup for role/word
-  if(data.imposter) {
-    showRolePopup(`You are IMPOSTER\nCategory: ${data.category}${data.hint ? "\nHint: "+data.hint : ""}`);
-  } else {
-    showRolePopup(`Word: ${data.word}`);
-  }
+  isImposter = data.imposter;
+  roleWord = data.word;
+
+  // Popup for role/word only
+  const popup = document.createElement("div");
+  popup.style.position = "fixed";
+  popup.style.top = "50%";
+  popup.style.left = "50%";
+  popup.style.transform = "translate(-50%, -50%)";
+  popup.style.backgroundColor = "#222";
+  popup.style.color = "white";
+  popup.style.padding = "20px";
+  popup.style.border = "2px solid #fff";
+  popup.style.zIndex = "1000";
+  popup.style.textAlign = "center";
+  popup.style.fontSize = "1.2em";
+  popup.style.borderRadius = "8px";
+  popup.innerText = isImposter
+    ? `You are IMPOSTER\nCategory: ${data.category}${hintsOn && data.hint ? "\nHint: " + data.hint : ""}`
+    : `Word: ${data.word}`;
+  document.body.appendChild(popup);
+
+  setTimeout(() => popup.remove(), 5000);
 });
 
 socket.on("revealPhase", () => {
@@ -157,7 +142,7 @@ socket.on("newClue", data => {
 });
 
 socket.on("allTurnsDone", () => {
-  turnText.innerText = "All players have given a clue.";
+  turnText.innerText = "All players have given clues. Host can start voting.";
 });
 
 function sendClue() {
@@ -175,7 +160,6 @@ function startVoting() {
 socket.on("votingStart", players => {
   currentPhase = "voting";
   chatContainer.hidden = false;
-
   cluesDiv.innerHTML = "<p>Voting started. Click a player:</p>";
   players.forEach(p => {
     const btn = document.createElement("button");
@@ -203,23 +187,14 @@ socket.on("gameOver", data => {
   game.hidden = true;
   endScreen.hidden = false;
   chatContainer.hidden = true;
-
   endInfo.innerText =
     `Imposter: ${data.imposter}\nWord: ${data.word}\nWinner: ${data.winner}`;
 });
 
 function playAgain() {
-  // instead of reloading, reset only necessary UI
-  currentPhase = "lobby";
-  lobby.hidden = false;
-  game.hidden = true;
-  endScreen.hidden = true;
-  cluesDiv.innerHTML = "";
-  chatDiv.innerHTML = "";
-  turnText.innerText = "";
-  revealPhaseMsg.innerText = "";
-  clueInput.value = "";
+  location.reload();
 }
+
 function disableClue() {
   clueInput.disabled = true;
   sendClueBtn.disabled = true;
