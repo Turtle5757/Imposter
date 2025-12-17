@@ -73,7 +73,7 @@ socket.on("role", data=>{
   roleWord=data.word;
   document.getElementById("role").innerText = data.imposter ? 
     "You are IMPOSTER\nCategory: "+data.category :
-    "Word: "+data.word;
+    "Word: "+data.word + (data.hints.length ? "\nHints: " + data.hints.join(", ") : "");
 });
 
 // Reveal phase
