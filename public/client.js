@@ -33,18 +33,17 @@ const msgInput = document.getElementById("msg");
 
 const endInfo = document.getElementById("endInfo");
 
-socket.on("connect", () => {
-  myId = socket.id;
-});
+const rolePopup = document.getElementById("rolePopup");
+const rolePopupText = document.getElementById("roleText");
+
+socket.on("connect", () => { myId = socket.id; });
 
 socket.on("roomList", list => {
   roomList.innerHTML = "";
   list.forEach(r => {
     const li = document.createElement("li");
     li.textContent = `${r.name} (${r.players})`;
-    li.onclick = () => {
-      roomInput.value = r.name;
-    };
+    li.onclick = () => { roomInput.value = r.name; };
     roomList.appendChild(li);
   });
 });
@@ -56,8 +55,7 @@ socket.on("roomUpdate", room => {
   playerList.innerHTML = "<h4>Players:</h4>";
   for (const id in room.players) {
     const p = document.createElement("p");
-    p.textContent =
-      room.players[id].name + (id === room.host ? " (Host)" : "");
+    p.textContent = room.players[id].name + (id === room.host ? " (Host)" : "");
     playerList.appendChild(p);
   }
 
@@ -68,20 +66,14 @@ socket.on("roomUpdate", room => {
 function createRoom() {
   NAME = nameInput.value.trim();
   ROOM = roomInput.value.trim();
-  if (!NAME || !ROOM) {
-    alert("Enter a name and room name");
-    return;
-  }
+  if (!NAME || !ROOM) { alert("Enter a name and room name"); return; }
   socket.emit("createRoom", { name: NAME, room: ROOM });
 }
 
 function joinRoom() {
   NAME = nameInput.value.trim();
   ROOM = roomInput.value.trim();
-  if (!NAME || !ROOM) {
-    alert("Enter a name and room name");
-    return;
-  }
+  if (!NAME || !ROOM) { alert("Enter a name and room name"); return; }
   socket.emit("joinRoom", { name: NAME, room: ROOM });
 }
 
@@ -91,11 +83,21 @@ function startGame() {
   socket.emit("startGame", { room: ROOM, category, hintsOn });
 }
 
+// ✅ Show role / word in a popup
 socket.on("role", data => {
-  roleText.innerText = data.imposter
-    ? `You are IMPOSTER\nCategory: ${data.category}${data.hint ? "\nHint: " + data.hint : ""}`
+  const text = data.imposter 
+    ? `You are IMPOSTER\nCategory: ${data.category}${data.hint ? "\nHint: "+data.hint : ""}`
     : `Word: ${data.word}`;
+  rolePopupText.innerText = text;
+  rolePopup.hidden = false;
+
+  // Automatically hide after 5s
+  setTimeout(closeRolePopup, 5000);
 });
+
+function closeRolePopup() {
+  rolePopup.hidden = true;
+}
 
 socket.on("revealPhase", () => {
   lobby.hidden = true;
@@ -177,8 +179,7 @@ socket.on("gameOver", data => {
   endScreen.hidden = false;
   chatContainer.hidden = true;
 
-  endInfo.innerText =
-    `Imposter: ${data.imposter}\nWord: ${data.word}\nWinner: ${data.winner}`;
+  endInfo.innerText = `Imposter: ${data.imposter}\nWord: ${data.word}\nWinner: ${data.winner}`;
 });
 
 function playAgain() {
