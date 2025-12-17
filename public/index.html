@@ -39,6 +39,7 @@
   </div>
 </div>
 
+<!-- GAME -->
 <div id="game" hidden>
   <h2 id="role"></h2>
   <div id="revealPhaseMsg"></div>
@@ -49,7 +50,10 @@
 
   <input id="clueInput" placeholder="Type your clue">
   <button id="sendClueBtn" onclick="sendClue()">Send Clue</button>
-  <button id="startVoteBtn" onclick="startVoting()" hidden>Start Voting (Host)</button>
+
+  <button id="startVoteBtn" onclick="startVoting()" hidden>
+    Start Voting (Host)
+  </button>
 
   <div id="chatContainer" hidden>
     <h3>Voting Chat</h3>
@@ -63,11 +67,6 @@
   <h2>Game Over</h2>
   <p id="endInfo"></p>
   <button onclick="playAgain()">Play Again</button>
-</div>
-
-<!-- Popup for reveal phase -->
-<div id="rolePopup" hidden>
-  <div id="rolePopupText"></div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
