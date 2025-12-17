@@ -1,24 +1,85 @@
-body { font-family:sans-serif; background:#111; color:white; text-align:center; }
-button { padding:6px; margin:3px; }
-input { padding:5px; margin:3px; }
-#clues,#chat,#playerList { height:200px; overflow-y:auto; border:1px solid #444; margin:10px; padding:5px; text-align:left; }
-#roomList li { cursor:pointer; margin:5px 0; }
-#roomList li:hover { color:yellow; }
-#revealPhaseMsg { margin:10px; font-size:1.2em; color:lightgreen; }
-#endScreen { margin-top:20px; }
-#chatContainer { margin-top:10px; }
+body { 
+  font-family: sans-serif; 
+  background: #111; 
+  color: white; 
+  text-align: center; 
+  margin: 0;
+  padding: 0;
+}
 
-/* Popup style */
-#rolePopup {
+button { 
+  padding: 6px; 
+  margin: 3px; 
+  cursor: pointer;
+}
+
+input { 
+  padding: 5px; 
+  margin: 3px; 
+}
+
+#clues, #chat, #playerList { 
+  height: 200px; 
+  overflow-y: auto; 
+  border: 1px solid #444; 
+  margin: 10px; 
+  padding: 5px; 
+  text-align: left; 
+  background: #222;
+  border-radius: 5px;
+}
+
+#roomList li { 
+  cursor: pointer; 
+  margin: 5px 0; 
+}
+
+#roomList li:hover { 
+  color: yellow; 
+}
+
+#revealPhaseMsg { 
+  margin: 10px; 
+  font-size: 1.2em; 
+  color: lightgreen; 
+}
+
+#endScreen { 
+  margin-top: 20px; 
+}
+
+#chatContainer { 
+  margin-top: 10px; 
+}
+
+.popup {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.85);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5em;
-  text-align: center;
-  z-index: 1000;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #222;
+  border: 2px solid #555;
+  border-radius: 10px;
   padding: 20px;
+  width: 300px;
+  z-index: 1000;
+  text-align: center;
+  box-shadow: 0 0 20px #000;
+  color: #fff;
+  display: none;
+}
+
+.popup h2 {
+  margin-top: 0;
+  font-size: 1.2em;
+}
+
+.popup.show {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translate(-50%, -60%); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
 }
