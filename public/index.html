@@ -16,15 +16,16 @@
   <div id="playerList"></div>
 
   <div id="categorySelect" hidden>
-    <h3>Select Category</h3>
+    <label>Category:</label>
     <select id="category">
       <option>Random</option>
       <option>Animal</option>
       <option>Food</option>
       <option>Place</option>
+      <option>Object</option>
     </select>
-    <label><input type="checkbox" id="hintsToggle" checked> Hints On</label>
-    <button onclick="selectCategory()">Confirm</button>
+    <label><input type="checkbox" id="hintsToggle" checked> Hints</label>
+    <button onclick="selectCategory()">Set Options</button>
   </div>
 
   <button id="startGameBtn" onclick="startGame()" hidden>Start Game (Host Only)</button>
