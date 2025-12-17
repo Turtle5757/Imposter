@@ -6,14 +6,19 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
 <div id="lobby">
   <h2>Lobby / Waiting Room</h2>
   <ul id="roomList"></ul>
+
   <input id="name" placeholder="Your Name">
   <input id="room" placeholder="Room Name">
+
   <button onclick="createRoom()">Create Room</button>
   <button onclick="joinRoom()">Join Room</button>
+
   <div id="playerList"></div>
+
   <div id="hostControls" hidden>
     <select id="categorySelect">
       <option value="Random">Random</option>
@@ -24,19 +29,32 @@
       <option value="Color">Color</option>
       <option value="Sport">Sport</option>
     </select>
-    <label><input type="checkbox" id="hintsToggle" checked> Hints On</label>
-    <button id="startGameBtn" onclick="startGame()">Start Game</button>
-    <button id="startVoteBtn" onclick="startVoting()" hidden>Start Voting</button>
+
+    <label>
+      <input type="checkbox" id="hintsToggle" checked>
+      Hints On
+    </label>
+
+    <button onclick="startGame()">Start Game</button>
   </div>
 </div>
 
+<!-- GAME -->
 <div id="game" hidden>
   <h2 id="role"></h2>
   <div id="revealPhaseMsg"></div>
+
   <h3 id="turn"></h3>
+
   <div id="clues"></div>
+
   <input id="clueInput" placeholder="Type your clue">
   <button id="sendClueBtn" onclick="sendClue()">Send Clue</button>
+
+  <!-- ✅ START VOTING BUTTON MOVED HERE -->
+  <button id="startVoteBtn" onclick="startVoting()" hidden>
+    Start Voting (Host)
+  </button>
 
   <div id="chatContainer" hidden>
     <h3>Voting Chat</h3>
