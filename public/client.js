@@ -1,191 +1,81 @@
 const socket = io();
+let ROOM, NAME, HOST=false;
 
-let ROOM = "";
-let NAME = "";
-let myId = "";
-let isHost = false;
-let currentPhase = "lobby";
+function createRoom(){
+  NAME=name.value; ROOM=room.value;
+  socket.emit("createRoom",{name:NAME,room:ROOM});
+}
 
-const lobby = document.getElementById("lobby");
-const game = document.getElementById("game");
-const endScreen = document.getElementById("endScreen");
+function joinRoom(){
+  NAME=name.value; ROOM=room.value;
+  socket.emit("joinRoom",{name:NAME,room:ROOM});
+}
 
-const roomList = document.getElementById("roomList");
-const playerList = document.getElementById("playerList");
+function startGame(){
+  socket.emit("settings",{
+    room:ROOM,
+    category:category.value,
+    hints:hints.checked
+  });
+  socket.emit("startGame",ROOM);
+}
 
-const nameInput = document.getElementById("name");
-const roomInput = document.getElementById("room");
-
-const hostControls = document.getElementById("hostControls");
-const startVoteBtn = document.getElementById("startVoteBtn");
-
-const roleText = document.getElementById("role");
-const revealPhaseMsg = document.getElementById("revealPhaseMsg");
-const turnText = document.getElementById("turn");
-
-const cluesDiv = document.getElementById("clues");
-const clueInput = document.getElementById("clueInput");
-const sendClueBtn = document.getElementById("sendClueBtn");
-
-const chatContainer = document.getElementById("chatContainer");
-const chatDiv = document.getElementById("chat");
-const msgInput = document.getElementById("msg");
-
-const endInfo = document.getElementById("endInfo");
-
-socket.on("connect", () => {
-  myId = socket.id;
+socket.on("roomUpdate", r=>{
+  HOST = r.host === socket.id;
+  startBtn.hidden = !HOST;
 });
 
-socket.on("roomList", list => {
-  roomList.innerHTML = "";
-  list.forEach(r => {
-    const li = document.createElement("li");
-    li.textContent = `${r.name} (${r.players})`;
-    li.onclick = () => {
-      roomInput.value = r.name;
-    };
-    roomList.appendChild(li);
+socket.on("role", d=>{
+  role.innerText = d.imposter
+    ? "IMPOSTER"
+    : `Word: ${d.word}\nHint: ${d.hint || "Off"}`;
+  lobby.hidden=true;
+  game.hidden=false;
+});
+
+socket.on("turn", id=>{
+  turn.innerText = id===socket.id ? "Your turn" : "Waiting...";
+});
+
+function sendClue(){
+  socket.emit("sendClue",{room:ROOM,clue:clue.value});
+  clue.value="";
+}
+
+function startVoting(){
+  socket.emit("startVoting",ROOM);
+}
+
+socket.on("votingStart", players=>{
+  chat.innerHTML="";
+  players.forEach(p=>{
+    const b=document.createElement("button");
+    b.textContent=p.name;
+    b.onclick=()=>socket.emit("vote",{room:ROOM,target:p.id});
+    chat.appendChild(b);
   });
 });
 
-socket.on("roomUpdate", room => {
-  ROOM = room.name || ROOM;
-  if (!room.players[myId]) return;
-
-  playerList.innerHTML = "<h4>Players:</h4>";
-  for (const id in room.players) {
-    const p = document.createElement("p");
-    p.textContent =
-      room.players[id].name + (id === room.host ? " (Host)" : "");
-    playerList.appendChild(p);
-  }
-
-  isHost = room.host === myId;
-  hostControls.hidden = !isHost;
-});
-
-function createRoom() {
-  NAME = nameInput.value.trim();
-  ROOM = roomInput.value.trim();
-  if (!NAME || !ROOM) {
-    alert("Enter a name and room name");
-    return;
-  }
-  socket.emit("createRoom", { name: NAME, room: ROOM });
+function sendChat(){
+  socket.emit("chat",{room:ROOM,name:NAME,msg:msg.value});
+  msg.value="";
 }
 
-function joinRoom() {
-  NAME = nameInput.value.trim();
-  ROOM = roomInput.value.trim();
-  if (!NAME || !ROOM) {
-    alert("Enter a name and room name");
-    return;
-  }
-  socket.emit("joinRoom", { name: NAME, room: ROOM });
+socket.on("chat", d=>{
+  chat.innerHTML+=`<p><b>${d.name}:</b> ${d.msg}</p>`;
+});
+
+socket.on("gameOver", d=>{
+  game.hidden=true;
+  end.hidden=false;
+  result.innerText=`${d.winner} win\nImposter: ${d.imposter}\nWord: ${d.word}`;
+});
+
+function playAgain(){
+  socket.emit("playAgain",ROOM);
 }
 
-function startGame() {
-  const category = document.getElementById("categorySelect").value;
-  const hintsOn = document.getElementById("hintsToggle").checked;
-  socket.emit("startGame", { room: ROOM, category, hintsOn });
-}
-
-socket.on("role", data => {
-  roleText.innerText = data.imposter
-    ? `You are IMPOSTER\nCategory: ${data.category}${data.hint ? "\nHint: " + data.hint : ""}`
-    : `Word: ${data.word}`;
+socket.on("resetGame",()=>{
+  end.hidden=true;
+  lobby.hidden=false;
 });
-
-socket.on("revealPhase", () => {
-  lobby.hidden = true;
-  game.hidden = false;
-  endScreen.hidden = true;
-  revealPhaseMsg.innerText = "Memorize your role...";
-  chatContainer.hidden = true;
-});
-
-socket.on("cluePhase", () => {
-  currentPhase = "clues";
-  revealPhaseMsg.innerText = "";
-  startVoteBtn.hidden = !isHost;
-  chatContainer.hidden = true;
-  disableClue();
-});
-
-socket.on("turn", id => {
-  if (id === myId) {
-    turnText.innerText = "Your Turn!";
-    clueInput.disabled = false;
-    sendClueBtn.disabled = false;
-  } else {
-    turnText.innerText = "Waiting for another player...";
-    disableClue();
-  }
-});
-
-socket.on("newClue", data => {
-  cluesDiv.innerHTML += `<p><b>${data.player}:</b> ${data.clue}</p>`;
-  cluesDiv.scrollTop = cluesDiv.scrollHeight;
-});
-
-socket.on("allTurnsDone", () => {
-  turnText.innerText = "All players have given a clue.";
-});
-
-function sendClue() {
-  if (!clueInput.value.trim()) return;
-  socket.emit("sendClue", { room: ROOM, clue: clueInput.value });
-  clueInput.value = "";
-  disableClue();
-}
-
-function startVoting() {
-  startVoteBtn.hidden = true;
-  socket.emit("startVoting", ROOM);
-}
-
-socket.on("votingStart", players => {
-  currentPhase = "voting";
-  chatContainer.hidden = false;
-
-  cluesDiv.innerHTML = "<p>Voting started. Click a player:</p>";
-  players.forEach(p => {
-    const btn = document.createElement("button");
-    btn.textContent = p.name;
-    btn.onclick = () => {
-      socket.emit("vote", { room: ROOM, target: p.id });
-      btn.disabled = true;
-    };
-    cluesDiv.appendChild(btn);
-  });
-});
-
-function sendChat() {
-  if (!msgInput.value.trim()) return;
-  socket.emit("chat", { room: ROOM, msg: msgInput.value, name: NAME });
-  msgInput.value = "";
-}
-
-socket.on("chat", data => {
-  chatDiv.innerHTML += `<p><b>${data.name}:</b> ${data.msg}</p>`;
-  chatDiv.scrollTop = chatDiv.scrollHeight;
-});
-
-socket.on("gameOver", data => {
-  game.hidden = true;
-  endScreen.hidden = false;
-  chatContainer.hidden = true;
-
-  endInfo.innerText =
-    `Imposter: ${data.imposter}\nWord: ${data.word}\nWinner: ${data.winner}`;
-});
-
-function playAgain() {
-  location.reload();
-}
-
-function disableClue() {
-  clueInput.disabled = true;
-  sendClueBtn.disabled = true;
-}
