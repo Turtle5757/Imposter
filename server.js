@@ -8,28 +8,27 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-// Words, categories, and harder hints
+// Words per category with harder hints
 const WORDS = {
   Animal: [
-    { word: "Elephant", hints: ["Has a trunk", "Large ears", "Grey color", "Memory is strong"] },
-    { word: "Kangaroo", hints: ["Jumps a lot", "Carries babies in pouch", "Native to Australia"] },
-    { word: "Dolphin", hints: ["Lives in water", "Very intelligent", "Makes clicks"] },
-    { word: "Giraffe", hints: ["Tall", "Spots", "Long neck"] },
-    { word: "Penguin", hints: ["Bird", "Cannot fly", "Waddles", "Lives in cold"] }
+    { word: "Elephant", hints: ["Large memory", "Trunked mammal", "Gray giant"] },
+    { word: "Dolphin", hints: ["Aquatic mammal", "Intelligent swimmer", "Not a fish"] },
+    { word: "Kangaroo", hints: ["Jumps far", "Pouch mammal", "Native to Australia"] }
   ],
   Food: [
-    { word: "Pizza", hints: ["Round", "Cheesy", "Has toppings"] },
-    { word: "Sushi", hints: ["Japanese", "Raw fish", "Rice"] },
-    { word: "Burger", hints: ["Fast food", "Has patty", "Bun"] },
-    { word: "Chocolate", hints: ["Sweet", "Brown", "Cocoa"] },
-    { word: "Pasta", hints: ["Italian", "Noodles", "Can be with sauce"] }
+    { word: "Pizza", hints: ["Round and cheesy", "Popular Italian dish", "Slices served"] },
+    { word: "Sushi", hints: ["Raw ingredient dish", "Japanese cuisine", "Rice and fish"] },
+    { word: "Taco", hints: ["Mexican wrap", "Folded meal", "Often spicy"] }
   ],
   Place: [
-    { word: "Beach", hints: ["Sand", "Ocean", "Sunbathing"] },
-    { word: "Library", hints: ["Quiet", "Books", "Study"] },
-    { word: "Airport", hints: ["Planes", "Travel", "Check-in"] },
-    { word: "Mountain", hints: ["High", "Climb", "Snow on top"] },
-    { word: "Desert", hints: ["Hot", "Sand", "Cactus"] }
+    { word: "Beach", hints: ["Sandy area", "Sun and waves", "Near ocean"] },
+    { word: "Mountains", hints: ["High elevation", "Peaks and slopes", "Hikers like me"] },
+    { word: "Desert", hints: ["Dry place", "Cactus habitat", "Very hot"] }
+  ],
+  Object: [
+    { word: "Laptop", hints: ["Portable device", "Closes like a book", "Has keyboard"] },
+    { word: "Chair", hints: ["Sitting furniture", "Four legs", "Back support"] },
+    { word: "Umbrella", hints: ["Protects from rain", "Opens and closes", "Handle attached"] }
   ]
 };
 
@@ -50,7 +49,6 @@ io.on("connection", socket => {
       clues: [],
       votedPlayers: new Set(),
       category: null,
-      wordObj: null,
       hintsOn: true
     };
     rooms[room].players[socket.id] = { name };
@@ -69,10 +67,10 @@ io.on("connection", socket => {
 
   socket.on("selectCategory", ({ room, category, hintsOn }) => {
     const r = rooms[room];
-    if (!r || socket.id !== r.host) return;
-    r.category = category;
+    if (!r) return;
+    if (socket.id !== r.host) return;
+    r.category = category || null;
     r.hintsOn = hintsOn;
-    io.to(room).emit("categorySelected", { category, hintsOn });
   });
 
   socket.on("startGame", room => {
@@ -81,16 +79,22 @@ io.on("connection", socket => {
     const ids = Object.keys(r.players);
     if (ids.length < 2) return;
 
-    // Pick category if not selected
-    const categories = Object.keys(WORDS);
-    const category = r.category || categories[Math.floor(Math.random() * categories.length)];
-    const wordsArray = WORDS[category];
-    const wordObj = wordsArray[Math.floor(Math.random() * wordsArray.length)];
-
+    // Pick imposter
     const imposter = ids[Math.floor(Math.random() * ids.length)];
+
+    // Pick word
+    let category = r.category;
+    if (!category) {
+      const cats = Object.keys(WORDS);
+      category = cats[Math.floor(Math.random() * cats.length)];
+    }
+    const words = WORDS[category];
+    const wordObj = words[Math.floor(Math.random() * words.length)];
+
     r.imposter = imposter;
-    r.wordObj = wordObj;
     r.word = wordObj.word;
+    r.category = category;
+    r.wordHints = wordObj.hints;
     r.turnOrder = [...ids];
     r.currentTurn = 0;
     r.state = "reveal";
@@ -101,8 +105,9 @@ io.on("connection", socket => {
     ids.forEach(id => {
       io.to(id).emit("role", {
         imposter: id === imposter,
-        word: id === imposter && r.hintsOn ? wordObj.hints : id === imposter ? null : r.word,
-        category: category
+        word: id === imposter ? null : r.word,
+        category: category,
+        hints: r.hintsOn && id !== imposter ? wordObj.hints : []
       });
     });
 
@@ -151,6 +156,7 @@ io.on("connection", socket => {
     r.votedPlayers.add(socket.id);
 
     if (r.votedPlayers.size === Object.keys(r.players).length) {
+      // Determine voted out
       let maxVotes = 0;
       let votedOut = null;
       for (const id in r.votes) {
@@ -166,6 +172,7 @@ io.on("connection", socket => {
         winner: crewWin ? "Crewmates" : "Imposter"
       });
 
+      // Reset for next game without kicking players
       r.state = "lobby";
       r.turnOrder = [];
       r.currentTurn = 0;
@@ -173,8 +180,10 @@ io.on("connection", socket => {
       r.clues = [];
       r.votedPlayers = new Set();
       r.imposter = null;
-      r.wordObj = null;
-      io.emit("roomList", getRoomList());
+      r.word = null;
+      r.category = null;
+      r.wordHints = [];
+      io.to(room).emit("roomUpdate", r);
     }
   });
 
