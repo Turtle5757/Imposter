@@ -8,43 +8,31 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-// --- Words with harder hints ---
-const WORDS = [
-  { category: "Animal", word: "Elephant", hint: "Earth’s gentle giant with a long reach" },
-  { category: "Animal", word: "Tiger", hint: "Striped shadow of the forest" },
-  { category: "Animal", word: "Penguin", hint: "Dressed for formal occasions in the cold" },
-  { category: "Animal", word: "Kangaroo", hint: "Jumps through life with a hidden pouch" },
-  { category: "Animal", word: "Owl", hint: "Night whisperer with wide eyes" },
-  { category: "Food", word: "Pizza", hint: "Shared circles of warmth and flavor" },
-  { category: "Food", word: "Sushi", hint: "Artful rolls of delicate balance" },
-  { category: "Food", word: "Chocolate", hint: "Sweetened essence from distant lands" },
-  { category: "Food", word: "Burger", hint: "Layered surprise between soft shields" },
-  { category: "Food", word: "Taco", hint: "Folded vessel for hidden treasures" },
-  { category: "Place", word: "Beach", hint: "Border where sand meets liquid horizon" },
-  { category: "Place", word: "Mountain", hint: "Earth rises to kiss the sky" },
-  { category: "Place", word: "Desert", hint: "Endless expanse of sun and silence" },
-  { category: "Place", word: "Forest", hint: "Vertical maze of green whispers" },
-  { category: "Place", word: "City", hint: "Concrete jungle humming with life" },
-  { category: "Object", word: "Laptop", hint: "Foldable brain in a box" },
-  { category: "Object", word: "Phone", hint: "Pocketed voice from afar" },
-  { category: "Object", word: "Clock", hint: "Spinning hands track invisible flow" },
-  { category: "Object", word: "Chair", hint: "Silent support for upright rest" },
-  { category: "Object", word: "Umbrella", hint: "Suspended shield from falling sky" },
-  { category: "Color", word: "Blue", hint: "Vast calm beyond the eye" },
-  { category: "Color", word: "Red", hint: "Heat, pulse, and alert" },
-  { category: "Color", word: "Green", hint: "Life’s signal, subtle and quiet" },
-  { category: "Color", word: "Yellow", hint: "Radiance caught in pigment" },
-  { category: "Color", word: "Purple", hint: "Mystery blend of cold and warm" },
-  { category: "Sport", word: "Soccer", hint: "Round pursuit on grassy expanse" },
-  { category: "Sport", word: "Basketball", hint: "Arc and bounce to victory" },
-  { category: "Sport", word: "Tennis", hint: "Racketed back-and-forth duel" },
-  { category: "Sport", word: "Baseball", hint: "Diamond game of bat and run" }
-];
+const WORDS = {
+  Animal: [
+    { word: "Elephant", hint: "Large land mammal" },
+    { word: "Giraffe", hint: "Long neck" }
+  ],
+  Food: [
+    { word: "Pizza", hint: "Cheesy slices" },
+    { word: "Burger", hint: "Stacked sandwich" }
+  ],
+  Place: [
+    { word: "Beach", hint: "Sand + ocean" },
+    { word: "Airport", hint: "Planes everywhere" }
+  ]
+};
 
 const rooms = {};
 
+const roomList = () =>
+  Object.keys(rooms).map(r => ({
+    name: r,
+    players: Object.keys(rooms[r].players).length
+  }));
+
 io.on("connection", socket => {
-  socket.emit("roomList", getRoomList());
+  socket.emit("roomList", roomList());
 
   socket.on("createRoom", ({ name, room }) => {
     if (rooms[room]) return;
@@ -52,16 +40,17 @@ io.on("connection", socket => {
       host: socket.id,
       players: {},
       state: "lobby",
-      turnOrder: [],
-      currentTurn: 0,
+      category: null,
+      hints: true,
+      order: [],
+      turn: 0,
       votes: {},
-      clues: [],
-      votedPlayers: new Set()
+      voted: new Set()
     };
     rooms[room].players[socket.id] = { name };
     socket.join(room);
+    io.emit("roomList", roomList());
     io.to(room).emit("roomUpdate", rooms[room]);
-    io.emit("roomList", getRoomList());
   });
 
   socket.on("joinRoom", ({ name, room }) => {
@@ -69,128 +58,110 @@ io.on("connection", socket => {
     rooms[room].players[socket.id] = { name };
     socket.join(room);
     io.to(room).emit("roomUpdate", rooms[room]);
-    io.emit("roomList", getRoomList());
+    io.emit("roomList", roomList());
   });
 
-  socket.on("startGame", ({ room, category = "Random", hintsOn = true }) => {
-    const r = rooms[room];
-    if (!r || socket.id !== r.host) return;
-    const ids = Object.keys(r.players);
-    if (ids.length < 2) return;
+  socket.on("settings", ({ room, category, hints }) => {
+    if (rooms[room]?.host !== socket.id) return;
+    rooms[room].category = category;
+    rooms[room].hints = hints;
+  });
 
-    // Select word based on category
-    let words = (category !== "Random") ? WORDS.filter(w => w.category === category) : WORDS;
-    const wordObj = words[Math.floor(Math.random() * words.length)];
+  socket.on("startGame", room => {
+    const r = rooms[room];
+    if (!r || r.host !== socket.id) return;
+
+    const ids = Object.keys(r.players);
     const imposter = ids[Math.floor(Math.random() * ids.length)];
+    const list = WORDS[r.category];
+    const chosen = list[Math.floor(Math.random() * list.length)];
 
     r.imposter = imposter;
-    r.word = wordObj.word;
-    r.category = wordObj.category;
-    r.hint = hintsOn ? wordObj.hint : null;
-    r.turnOrder = [...ids];
-    r.currentTurn = 0;
-    r.state = "reveal";
+    r.word = chosen.word;
+    r.hint = chosen.hint;
+    r.order = [...ids];
+    r.turn = 0;
+    r.state = "clues";
     r.votes = {};
-    r.clues = [];
-    r.votedPlayers = new Set();
+    r.voted = new Set();
 
     ids.forEach(id => {
       io.to(id).emit("role", {
         imposter: id === imposter,
-        word: id === imposter ? null : r.word,
-        category: wordObj.category,
-        hint: id === imposter ? r.hint : null
+        word: id === imposter ? null : chosen.word,
+        hint: r.hints ? chosen.hint : null,
+        category: r.category
       });
     });
 
-    io.to(room).emit("revealPhase");
-
-    setTimeout(() => {
-      r.state = "clues";
-      io.to(room).emit("cluePhase");
-      io.to(room).emit("turn", r.turnOrder[r.currentTurn]);
-    }, 5000);
+    io.to(room).emit("turn", r.order[0]);
   });
 
   socket.on("sendClue", ({ room, clue }) => {
     const r = rooms[room];
-    if (!r || r.state !== "clues") return;
-    if (socket.id !== r.turnOrder[r.currentTurn]) return;
+    if (!r || r.order[r.turn] !== socket.id) return;
 
-    r.clues.push({ player: r.players[socket.id].name, clue });
-    io.to(room).emit("newClue", { player: r.players[socket.id].name, clue });
+    io.to(room).emit("newClue", {
+      name: r.players[socket.id].name,
+      clue
+    });
 
-    r.currentTurn = (r.currentTurn + 1) % r.turnOrder.length;
-    io.to(room).emit("turn", r.turnOrder[r.currentTurn]);
+    r.turn++;
+    if (r.turn < r.order.length) {
+      io.to(room).emit("turn", r.order[r.turn]);
+    } else {
+      io.to(room).emit("cluesDone");
+    }
   });
 
   socket.on("startVoting", room => {
     const r = rooms[room];
-    if (!r || r.state !== "clues") return;
-    if (socket.id !== r.host) return;
-
+    if (!r || r.host !== socket.id) return;
     r.state = "voting";
-    r.votes = {};
-    r.votedPlayers = new Set();
-    io.to(room).emit("votingStart", Object.keys(r.players).map(id => ({ id, name: r.players[id].name })));
+    io.to(room).emit(
+      "votingStart",
+      Object.entries(r.players).map(([id, p]) => ({
+        id,
+        name: p.name
+      }))
+    );
   });
 
   socket.on("vote", ({ room, target }) => {
     const r = rooms[room];
-    if (!r || r.state !== "voting") return;
-    if (r.votedPlayers.has(socket.id)) return;
+    if (!r || r.voted.has(socket.id)) return;
 
+    r.voted.add(socket.id);
     r.votes[target] = (r.votes[target] || 0) + 1;
-    r.votedPlayers.add(socket.id);
 
-    if (r.votedPlayers.size === Object.keys(r.players).length) {
-      let maxVotes = 0;
-      let votedOut = null;
-      for (const id in r.votes) {
-        if (r.votes[id] > maxVotes) {
-          maxVotes = r.votes[id];
-          votedOut = id;
-        }
-      }
-      const crewWin = votedOut === r.imposter;
+    if (r.voted.size === Object.keys(r.players).length) {
+      const out = Object.entries(r.votes).sort((a, b) => b[1] - a[1])[0][0];
       io.to(room).emit("gameOver", {
-        imposter: r.players[r.imposter]?.name || "Unknown",
+        imposter: r.players[r.imposter].name,
         word: r.word,
-        winner: crewWin ? "Crewmates" : "Imposter"
+        winner: out === r.imposter ? "Crewmates" : "Imposter"
       });
-
-      r.state = "lobby";
-      r.turnOrder = [];
-      r.currentTurn = 0;
-      r.votes = {};
-      r.clues = [];
-      r.votedPlayers = new Set();
-      io.emit("roomList", getRoomList());
     }
   });
 
-  socket.on("chat", ({ room, msg, name }) => {
-    const r = rooms[room];
-    if (!r || r.state !== "voting") return;
+  socket.on("chat", ({ room, name, msg }) => {
     io.to(room).emit("chat", { name, msg });
   });
 
-  socket.on("disconnect", () => {
-    for (const room in rooms) {
-      if (rooms[room].players[socket.id]) {
-        delete rooms[room].players[socket.id];
-        io.to(room).emit("roomUpdate", rooms[room]);
-        io.emit("roomList", getRoomList());
-      }
-    }
+  socket.on("playAgain", room => {
+    const r = rooms[room];
+    if (!r || r.host !== socket.id) return;
+    r.state = "lobby";
+    io.to(room).emit("resetGame");
   });
 
-  function getRoomList() {
-    return Object.keys(rooms).map(r => ({
-      name: r,
-      players: Object.keys(rooms[r].players).length
-    }));
-  }
+  socket.on("disconnect", () => {
+    for (const r in rooms) {
+      delete rooms[r].players[socket.id];
+      io.to(r).emit("roomUpdate", rooms[r]);
+    }
+    io.emit("roomList", roomList());
+  });
 });
 
-server.listen(process.env.PORT || 3000, () => console.log("Server running"));
+server.listen(3000, () => console.log("Running on 3000"));
