@@ -51,7 +51,6 @@
   <input id="clueInput" placeholder="Type your clue">
   <button id="sendClueBtn" onclick="sendClue()">Send Clue</button>
 
-  <!-- ✅ START VOTING BUTTON MOVED HERE -->
   <button id="startVoteBtn" onclick="startVoting()" hidden>
     Start Voting (Host)
   </button>
@@ -68,6 +67,14 @@
   <h2>Game Over</h2>
   <p id="endInfo"></p>
   <button onclick="playAgain()">Play Again</button>
+</div>
+
+<!-- ✅ POPUP FOR WORD / IMPOSTER REVEAL -->
+<div id="rolePopup" class="popup" hidden>
+  <div class="popupContent">
+    <p id="roleText"></p>
+    <button onclick="closeRolePopup()">OK</button>
+  </div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
