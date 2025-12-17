@@ -33,34 +33,55 @@ const msgInput = document.getElementById("msg");
 
 const endInfo = document.getElementById("endInfo");
 
-// Popup for reveal
-const rolePopup = document.getElementById("rolePopup");
-const rolePopupText = document.getElementById("rolePopupText");
+// POPUP ELEMENT FOR ROLE/WORD
+const rolePopup = document.createElement("div");
+rolePopup.id = "rolePopup";
+rolePopup.style.position = "fixed";
+rolePopup.style.top = "50%";
+rolePopup.style.left = "50%";
+rolePopup.style.transform = "translate(-50%, -50%)";
+rolePopup.style.background = "#222";
+rolePopup.style.color = "white";
+rolePopup.style.border = "2px solid #555";
+rolePopup.style.padding = "20px";
+rolePopup.style.zIndex = "9999";
+rolePopup.style.display = "none";
+rolePopup.style.whiteSpace = "pre-line";
+document.body.appendChild(rolePopup);
+
+function showRolePopup(text) {
+  rolePopup.innerText = text;
+  rolePopup.style.display = "block";
+  setTimeout(() => {
+    rolePopup.style.display = "none";
+  }, 5000);
+}
 
 socket.on("connect", () => {
   myId = socket.id;
 });
 
-// ROOM LIST UPDATE
 socket.on("roomList", list => {
   roomList.innerHTML = "";
   list.forEach(r => {
     const li = document.createElement("li");
     li.textContent = `${r.name} (${r.players})`;
-    li.onclick = () => { roomInput.value = r.name; };
+    li.onclick = () => {
+      roomInput.value = r.name;
+    };
     roomList.appendChild(li);
   });
 });
 
-// ROOM UPDATE
 socket.on("roomUpdate", room => {
   ROOM = room.name || ROOM;
-  if(!room.players[myId]) return;
+  if (!room.players[myId]) return;
 
   playerList.innerHTML = "<h4>Players:</h4>";
-  for(const id in room.players){
+  for (const id in room.players) {
     const p = document.createElement("p");
-    p.textContent = room.players[id].name + (id===room.host ? " (Host)" : "");
+    p.textContent =
+      room.players[id].name + (id === room.host ? " (Host)" : "");
     playerList.appendChild(p);
   }
 
@@ -68,42 +89,49 @@ socket.on("roomUpdate", room => {
   hostControls.hidden = !isHost;
 });
 
-// CREATE / JOIN ROOM
 function createRoom() {
-  NAME = nameInput.value.trim(); ROOM = roomInput.value.trim();
-  if(!NAME||!ROOM){ alert("Enter a name and room"); return; }
-  socket.emit("createRoom", {name: NAME, room: ROOM});
+  NAME = nameInput.value.trim();
+  ROOM = roomInput.value.trim();
+  if (!NAME || !ROOM) {
+    alert("Enter a name and room name");
+    return;
+  }
+  socket.emit("createRoom", { name: NAME, room: ROOM });
 }
 
 function joinRoom() {
-  NAME = nameInput.value.trim(); ROOM = roomInput.value.trim();
-  if(!NAME||!ROOM){ alert("Enter a name and room"); return; }
-  socket.emit("joinRoom", {name: NAME, room: ROOM});
+  NAME = nameInput.value.trim();
+  ROOM = roomInput.value.trim();
+  if (!NAME || !ROOM) {
+    alert("Enter a name and room name");
+    return;
+  }
+  socket.emit("joinRoom", { name: NAME, room: ROOM });
 }
 
-// START GAME
 function startGame() {
   const category = document.getElementById("categorySelect").value;
   const hintsOn = document.getElementById("hintsToggle").checked;
-  socket.emit("startGame", {room: ROOM, category, hintsOn});
+  socket.emit("startGame", { room: ROOM, category, hintsOn });
 }
 
-// ROLE POPUP
 socket.on("role", data => {
-  rolePopupText.innerText = data.imposter 
-    ? `You are IMPOSTER\nCategory: ${data.category}${data.hint ? "\nHint: "+data.hint : ""}`
-    : `Word: ${data.word}`;
-  rolePopup.hidden = false;
+  // show popup for role/word
+  if(data.imposter) {
+    showRolePopup(`You are IMPOSTER\nCategory: ${data.category}${data.hint ? "\nHint: "+data.hint : ""}`);
+  } else {
+    showRolePopup(`Word: ${data.word}`);
+  }
 });
 
 socket.on("revealPhase", () => {
-  lobby.hidden = true; game.hidden = false; endScreen.hidden = true;
+  lobby.hidden = true;
+  game.hidden = false;
+  endScreen.hidden = true;
   revealPhaseMsg.innerText = "Memorize your role...";
   chatContainer.hidden = true;
-  setTimeout(() => { rolePopup.hidden = true; }, 5000);
 });
 
-// CLUE PHASE
 socket.on("cluePhase", () => {
   currentPhase = "clues";
   revealPhaseMsg.innerText = "";
@@ -113,9 +141,10 @@ socket.on("cluePhase", () => {
 });
 
 socket.on("turn", id => {
-  if(id === myId){
+  if (id === myId) {
     turnText.innerText = "Your Turn!";
-    clueInput.disabled = false; sendClueBtn.disabled = false;
+    clueInput.disabled = false;
+    sendClueBtn.disabled = false;
   } else {
     turnText.innerText = "Waiting for another player...";
     disableClue();
@@ -132,18 +161,12 @@ socket.on("allTurnsDone", () => {
 });
 
 function sendClue() {
-  if(!clueInput.value.trim()) return;
-  socket.emit("sendClue",{room: ROOM, clue: clueInput.value});
+  if (!clueInput.value.trim()) return;
+  socket.emit("sendClue", { room: ROOM, clue: clueInput.value });
   clueInput.value = "";
   disableClue();
 }
 
-function disableClue() {
-  clueInput.disabled = true;
-  sendClueBtn.disabled = true;
-}
-
-// VOTING
 function startVoting() {
   startVoteBtn.hidden = true;
   socket.emit("startVoting", ROOM);
@@ -157,15 +180,17 @@ socket.on("votingStart", players => {
   players.forEach(p => {
     const btn = document.createElement("button");
     btn.textContent = p.name;
-    btn.onclick = () => { socket.emit("vote",{room: ROOM,target: p.id}); btn.disabled = true; };
+    btn.onclick = () => {
+      socket.emit("vote", { room: ROOM, target: p.id });
+      btn.disabled = true;
+    };
     cluesDiv.appendChild(btn);
   });
 });
 
-// CHAT
 function sendChat() {
-  if(!msgInput.value.trim()) return;
-  socket.emit("chat",{room: ROOM, msg: msgInput.value, name: NAME});
+  if (!msgInput.value.trim()) return;
+  socket.emit("chat", { room: ROOM, msg: msgInput.value, name: NAME });
   msgInput.value = "";
 }
 
@@ -174,19 +199,28 @@ socket.on("chat", data => {
   chatDiv.scrollTop = chatDiv.scrollHeight;
 });
 
-// GAME OVER
 socket.on("gameOver", data => {
-  game.hidden = true; endScreen.hidden = false;
+  game.hidden = true;
+  endScreen.hidden = false;
   chatContainer.hidden = true;
-  endInfo.innerText = `Imposter: ${data.imposter}\nWord: ${data.word}\nWinner: ${data.winner}`;
+
+  endInfo.innerText =
+    `Imposter: ${data.imposter}\nWord: ${data.word}\nWinner: ${data.winner}`;
 });
 
-// PLAY AGAIN (reset everything but keep in room, host stays if possible)
 function playAgain() {
-  socket.emit("playAgain", ROOM);
+  // instead of reloading, reset only necessary UI
   currentPhase = "lobby";
-  lobby.hidden = false; game.hidden = true; endScreen.hidden = true;
-  cluesDiv.innerHTML = ""; chatDiv.innerHTML = "";
-  turnText.innerText = ""; revealPhaseMsg.innerText = "";
-  clueInput.value = ""; disableClue();
+  lobby.hidden = false;
+  game.hidden = true;
+  endScreen.hidden = true;
+  cluesDiv.innerHTML = "";
+  chatDiv.innerHTML = "";
+  turnText.innerText = "";
+  revealPhaseMsg.innerText = "";
+  clueInput.value = "";
+}
+function disableClue() {
+  clueInput.disabled = true;
+  sendClueBtn.disabled = true;
 }
