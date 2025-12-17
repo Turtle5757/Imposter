@@ -102,12 +102,14 @@ socket.on("revealPhase", () => {
   game.hidden = false;
   endScreen.hidden = true;
   revealPhaseMsg.innerText = "Memorize your role...";
+  chatContainer.hidden = true;
 });
 
 socket.on("cluePhase", () => {
   currentPhase = "clues";
   revealPhaseMsg.innerText = "";
   startVoteBtn.hidden = !isHost;
+  chatContainer.hidden = true;
   disableClue();
 });
 
@@ -140,11 +142,13 @@ function sendClue() {
 
 function startVoting() {
   startVoteBtn.hidden = true;
-  chatContainer.hidden = false;
   socket.emit("startVoting", ROOM);
 }
 
 socket.on("votingStart", players => {
+  currentPhase = "voting";
+  chatContainer.hidden = false;
+
   cluesDiv.innerHTML = "<p>Voting started. Click a player:</p>";
   players.forEach(p => {
     const btn = document.createElement("button");
@@ -172,6 +176,7 @@ socket.on("gameOver", data => {
   game.hidden = true;
   endScreen.hidden = false;
   chatContainer.hidden = true;
+
   endInfo.innerText =
     `Imposter: ${data.imposter}\nWord: ${data.word}\nWinner: ${data.winner}`;
 });
